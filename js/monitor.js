@@ -8,7 +8,7 @@ let tabListener = async function (data) {
 	if (data.url.indexOf("chrome://") == 0 || data.url.indexOf("about:") == 0) {
 		console.debug("Skipped interception on browser's internal pages.");
 	} else if (data.url.indexOf(selfExtSource) == 0) {
-		console.debug("Skipped interception on OptiShade pages.");
+		console.debug("Skipped interception on Minuette pages.");
 	} else {
 		let connectionId = "", connectionPrimitive = new Uint8Array(16);
 		self.crypto.getRandomValues(connectionPrimitive);

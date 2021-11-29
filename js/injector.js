@@ -91,7 +91,7 @@ Object.freeze(altConsole);
 			delete EL.list[type];
 			debugger;
 		} else {
-			altConsole.warn("Tried to remove a non-existent type: " + type + ".");
+			//altConsole.warn("Tried to remove a non-existent type: " + type + ".");
 		};
 	};
 	// Smart event capturing
@@ -140,11 +140,11 @@ Object.freeze(altConsole);
 		//altConsole.info("Removed: %o", {b: listenerCapture, a: type, c: this});
 		if (!this[ELs]) {
 			this[ELs] = {};
-			altConsole.warn("No event listeners present.");
+			//altConsole.warn("No event listeners present.");
 		};
 		if (!this[ELs][type]) {
 			this[ELs][type] = new LSet();
-			altConsole.warn("No event listeners of type \"" + type + "\" present.");
+			//altConsole.warn("No event listeners of type \"" + type + "\" present.");
 		};
 		if (!this[EID]) {
 			this[EID] = getCuid();
@@ -159,7 +159,7 @@ Object.freeze(altConsole);
 				//altConsole.info("Removed type " + type + " on %o", this);
 			};
 		} else {
-			altConsole.warn("Tried to remove a non-existent listener.");
+			//altConsole.warn("Tried to remove a non-existent listener.");
 		};
 		return result;
 	};
@@ -173,7 +173,7 @@ Object.freeze(altConsole);
 				});
 				delete upThis[ELs][e];
 			} else {
-				altConsole.warn("Tried to remove a non-existent type.");
+				//altConsole.warn("Tried to remove a non-existent type.");
 			};
 		});
 	};

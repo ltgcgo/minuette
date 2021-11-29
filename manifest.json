@@ -1,21 +1,21 @@
 {
 	"manifest_version": 2,
-	"name": "OptiShade",
-	"version": "0.0.2",
-	"description": "Probe page events safely.",
-	"homepage_url": "https://www.ltgc.cc/",
+	"name": "Minuette",
+	"version": "0.0.3",
+	"description": "⏳ Intercept and orchestrate events, with unicorn power!",
+	"homepage_url": "https://www.ltgc.cc/project/?view=/minuette",
 	"browser_action": {
 		"default_popup": "web/popup.htm",
-		"default_title": "OptiShade"
+		"default_title": "Minuette"
 	},
 	"background": {
 		"page": "background.htm",
 		"persistent": true
 	},
-	"minimum_chrome_version": "59.0.0",
+	"minimum_chrome_version": "81.0.0",
 	"options_page": "placeholder.htm",
 	"options_ui": {
-		"page": "placeholder.htm",
+		"page": "web/options.htm",
 		"open_in_tab": true
 	},
 	"permissions": [
@@ -25,8 +25,6 @@
 		"webNavigation",
 		"webRequest",
 		"webRequestBlocking",
-		"http://*/*",
-		"https://*/*",
 		"<all_urls>"
 	],
 	"content_scripts": [],

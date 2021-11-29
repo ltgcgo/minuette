@@ -56,4 +56,5 @@ li.option-disable:hover {
 	text-align: center;
 	font-size: 24px;
 	cursor: default;
+	font-weight: bold;
 }

@@ -1,7 +1,33 @@
-# OptiShade
-Monitoring every single event listener's registration. Never lose a beat again.
+# Minuette
+⏳ Intercept and orchestrate events, with unicorn power!
+
+Compatible with both Chromium and Firefox.
 
 ## Features
-* Log every single event listener registration and removal.
-* Log every event listened by listeners, with your own custom filters.
-* Remove every single event listener of a specific type registered, element-wide and page-wide.
+* Event listeners
+  - [x] Intercept
+  - [x] Track
+  - [x] Remove
+  - [ ] Silent reject
+  - [ ] Visualize
+  - [ ] Cheat trigger
+* Web requests
+  - [ ] Intercept
+  - [ ] Silent request reject
+  - [ ] Silent response reject
+  - [ ] Silent response forging
+  - [ ] Header shapeshifting
+  - [ ] Body shapeshifting (if small!)
+  - [ ] Replay
+  - [ ] Visualize
+  - [ ] Arbitrary request sending
+* BroadcastChannel, WebSockets, Cross-frame messaging
+  - [ ] Intercept
+  - [ ] Silent posting reject
+  - [ ] Silent receiving reject
+  - [ ] Silent forging receipt
+  - [ ] Message shapeshifting
+  - [ ] Replay
+  - [ ] Silent posting
+* Cookie
+* LocalStorage, SessionStorage

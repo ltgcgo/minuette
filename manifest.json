@@ -1,33 +1,35 @@
 {
 	"manifest_version": 2,
 	"name": "OptiShade",
-	"version": "0.1",
+	"version": "0.0.2",
 	"description": "Probe page events safely.",
-	"page_action": {
-		"browser_style": false,
-		"default_title": "Event Prober"
+	"homepage_url": "https://www.ltgc.cc/",
+	"browser_action": {
+		"default_popup": "web/popup.htm",
+		"default_title": "OptiShade"
 	},
 	"background": {
-		"page": "background.htm"
+		"page": "background.htm",
+		"persistent": true
 	},
 	"minimum_chrome_version": "59.0.0",
 	"options_page": "placeholder.htm",
 	"options_ui": {
 		"page": "placeholder.htm",
-		"browser_style": false,
 		"open_in_tab": true
 	},
 	"permissions": [
 		"activeTab",
 		"tabs",
-		"background",
 		"cookies",
 		"webNavigation",
 		"webRequest",
 		"webRequestBlocking",
-		"contextMenus",
 		"http://*/*",
 		"https://*/*",
 		"<all_urls>"
-	]
+	],
+	"content_scripts": [],
+	"content_security_policy": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; object-src 'self'; connect-src *;",
+	"web_accessible_resources": ["*"]
 }

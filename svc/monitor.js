@@ -53,12 +53,11 @@ let tabListener = async function (data) {
 	} else if (data.id < 0) {
 		console.debug("Skipped interception on reserved pages.");
 	} else {
-		let pageId = getUid(24);
 		if (!tabPage[data.id]) {
 			tabPage[data.id] = new Set();
 		};
 			browser.tabs.executeScript(data.id, {code: injectorAgentText.replace("-ReplaceThisWithTabId-", data.id), allFrames: true, runAt: "document_start"});
-			console.info("Injection agent is now live on tab \"" + data.id + "\"(" + pageId + "): " + data.url + ".");
+			console.info("Injection agent is now live on tab \"" + data.id + "\": " + data.url + ".");
 	};
 };
 let loadListener = async function (data) {
@@ -66,6 +65,7 @@ let loadListener = async function (data) {
 };
 let pageCloseListener = async function (pid) {
 	if (tracking[pid]) {
+		tabPage[tracking[pid].tab].delete(pid);
 		tracking[pid].port.disconnect();
 		delete tracking[pid];
 	};
@@ -83,12 +83,13 @@ let messageConnectionListener = async function (connection) {
 	connection.onMessage.addListener(function (data) {
 		let msg = JSON.parse(data);
 		switch (msg.event) {
-			case "pageStart": {
+			case "pageStart":
+			case "pageKeep": {
 				tabPage[msg.tid].add(msg.pid);
 				if (!tracking[msg.pid]) {
 					tracking[msg.pid] = {port: connection, elements: {}, url: msg.url, tab: msg.tid};
 				};
-				console.info(tabPage);
+				tracking[msg.pid].ts = Date.now();
 				break;
 			};
 			case "pageEnd": {
@@ -110,10 +111,10 @@ let messageConnectionListener = async function (connection) {
 	});
 };
 let tabCloseListener = async function (data) {
-	console.info(data);
-	if (tabPage[data.id]) {
+	//console.info(data);
+	/* if (tabPage[data.id]) {
 		delete tabPage[data.id];
-	};
+	}; */
 	console.info("Tab \"" + data.id + "\" is leaving \"" + data.url + "\" for \"" + data.pendingUrl + "\".");
 };
 let unloadListener = async function (data) {
@@ -127,7 +128,9 @@ browser.runtime.onConnect.addListener(messageConnectionListener);
 
 // Announce load and unload times
 addEventListener("beforeunload", function () {
-	browser.runtime.sendMessage('{event:"monitorDisconnect"}');
+	for (let pid in tracking) {
+		tracking[pid].port.postMessage('{event:"monitorDisconnect"}');
+	};
 });
 postMessage('{event:"monitorConnect"}');
 
@@ -148,4 +151,18 @@ fetcher();
 
 // Keep-alive check
 let keepalive = setInterval(function () {
+	let ts = Date.now();
+	for (let pid in tracking) {
+		switch (true) {
+			case ((ts - tracking[pid].ts) < 5000): {
+				break;
+			};
+			default: {
+				tracking[pid].port.disconnect();
+				delete tracking[pid];
+				console.info("Removed dead tab " + pid);
+				break;
+			};
+		};
+	};
 }, 5000);

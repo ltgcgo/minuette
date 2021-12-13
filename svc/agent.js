@@ -5,6 +5,7 @@ if (!self.agentActive) {
 	let connection, refreshConnection = function () {
 		connection = chrome.runtime.connect();
 		connection.onMessage.addListener(receiver);
+		connection.onDisconnect.addListener(refreshConnection);
 	};
 	let pageId = "";
 	let map = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";

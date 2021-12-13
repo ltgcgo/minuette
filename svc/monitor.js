@@ -55,7 +55,7 @@ let tabListener = async function (data) {
 	} else {
 		let pageId = getUid(24);
 		if (!tabPage[data.id]) {
-			browser.tabs.executeScript(data.id, {code: injectorAgentText.replace("-ReplaceExtWithSomethingUnique-", pageId).replace("-ReplaceThisWithTabId-", data.id), allFrames: true, runAt: "document_start"});
+			browser.tabs.executeScript(data.id, {code: injectorAgentText.replace("-ReplaceThisWithTabId-", data.id), allFrames: true, runAt: "document_start"});
 			console.info("Injection agent is now live on tab \"" + data.id + "\"(" + pageId + "): " + data.url + ".");
 			tabPage[data.id] = new Set();
 		};

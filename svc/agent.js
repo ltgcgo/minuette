@@ -6,13 +6,17 @@
 		connection = chrome.runtime.connect();
 		connection.onMessage.addListener(receiver);
 	};
-	let pageId = "-ReplaceExtWithSomethingUnique-";
+	let pageId = "";
 	console.info("Exchanging information with extension channel: " + pageId);
 	let map = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
-	let connectionId = "", connectionPrimitive = new Uint8Array(16);
-	self.crypto.getRandomValues(connectionPrimitive);
-	connectionPrimitive.forEach(function (e) {
+	let connectionId = "", primitive = new Uint8Array(16);
+	self.crypto.getRandomValues(primitive);
+	primitive.forEach(function (e) {
 		connectionId += map[e % 64];
+	});
+	self.crypto.getRandomValues(primitive);
+	primitive.forEach(function (e) {
+		pageId += map[e % 64];
 	});
 	let receiver = function (data) {
 		if (data.slice(0, 13) == "\"use strict\";") {

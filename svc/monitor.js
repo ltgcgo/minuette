@@ -55,43 +55,19 @@ let tabListener = async function (data) {
 	} else {
 		let pageId = getUid(24);
 		if (!tabPage[data.id]) {
-			browser.tabs.executeScript(data.id, {code: injectorAgentText.replace("-ReplaceThisWithTabId-", data.id), allFrames: true, runAt: "document_start"});
-			console.info("Injection agent is now live on tab \"" + data.id + "\"(" + pageId + "): " + data.url + ".");
 			tabPage[data.id] = new Set();
 		};
+			browser.tabs.executeScript(data.id, {code: injectorAgentText.replace("-ReplaceThisWithTabId-", data.id), allFrames: true, runAt: "document_start"});
+			console.info("Injection agent is now live on tab \"" + data.id + "\"(" + pageId + "): " + data.url + ".");
 	};
 };
 let loadListener = async function (data) {
 	tabListener(await browser.tabs.get(data.tabId));
 };
-let pageCloseListener = async function (cid) {
+let pageCloseListener = async function (pid) {
 	if (tracking[pid]) {
 		tracking[pid].port.disconnect();
 		delete tracking[pid];
-	};
-};
-let messageInterpreter = function (data) {
-	let msg = JSON.parse(data);
-	switch (msg.event) {
-		case "pageConnect": {
-			console.warn(data);
-			break;
-		};
-		case "pageClose": {
-			pageCloseListener(msg.cid);
-			break;
-		};
-		case "elAdd": {
-			if (!tracking[msg.cid].elements[msg.eid]) {
-				tracking[msg.cid].elements[msg.eid] = new Set();
-				tracking[msg.cid].elements[msg.eid].selector = msg.selector;
-			};
-			tracking[msg.cid].elements[msg.eid].add(msg.type);
-			break;
-		};
-		default: {
-			console.info("Private event: %o", msg);
-		};
 	};
 };
 let publicInterpreter = function (data) {
@@ -104,7 +80,34 @@ let publicInterpreter = function (data) {
 };
 let messageConnectionListener = async function (connection) {
 	connection.postMessage(injectorText);
-	connection.onMessage.addListener(messageInterpreter)
+	connection.onMessage.addListener(function (data) {
+		let msg = JSON.parse(data);
+		switch (msg.event) {
+			case "pageStart": {
+				tabPage[msg.tid].add(msg.pid);
+				if (!tracking[msg.pid]) {
+					tracking[msg.pid] = {port: connection, elements: {}, url: msg.url, tab: msg.tid};
+				};
+				console.info(tabPage);
+				break;
+			};
+			case "pageEnd": {
+				pageCloseListener(msg.pid);
+				break;
+			};
+			case "elAdd": {
+				if (!tracking[msg.pid].elements[msg.eid]) {
+					tracking[msg.pid].elements[msg.eid] = new Set();
+					tracking[msg.pid].elements[msg.eid].selector = msg.selector;
+				};
+				tracking[msg.pid].elements[msg.eid].add(msg.type);
+				break;
+			};
+			default: {
+				console.info("Private event: %o", msg);
+			};
+		};
+	});
 };
 let tabCloseListener = async function (data) {
 	console.info(data);
@@ -129,7 +132,7 @@ addEventListener("beforeunload", function () {
 postMessage('{event:"monitorConnect"}');
 
 // Fetch the agent scripts periodicly
-let task = setInterval(function () {
+let fetcher = async function () {
 	fetch("/svc/agent.js").then(function (response) {
 		return response.text();
 	}).then(function (data) {
@@ -140,7 +143,8 @@ let task = setInterval(function () {
 	}).then(function (data) {
 		injectorText = data;
 	});
-}, 2500);
+}, task = setInterval(fetcher, 2500);
+fetcher();
 
 // Keep-alive check
 let keepalive = setInterval(function () {

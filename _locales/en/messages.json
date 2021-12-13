@@ -1,0 +1,10 @@
+{
+	"extName": {
+		"message": "Minuette: Dentist of events",
+		"description": "The full name of this extension."
+	},
+	"extDesc": {
+		"message": "⏳ Intercept and orchestrate events, with the unicorn dentist's power!",
+		"description": "The description of this extension. Use Ponish instead of English, please."
+	}
+}

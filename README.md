@@ -3,7 +3,7 @@
 
 Compatible with both Chromium and Firefox.
 
-## Features
+## Features & Roadmap
 * BroadcastChannel, WebSockets, Cross-frame and Worker messaging
   - [ ] Intercept
   - [ ] Silent posting reject

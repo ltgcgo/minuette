@@ -7,11 +7,11 @@
 	"description": "__MSG_extDesc__",
 	"homepage_url": "https://www.ltgc.cc/project/?view=/minuette",
 	"browser_action": {
-		"default_popup": "web/popup.htm",
+		"default_popup": "ui/popup.htm",
 		"default_title": "Minuette"
 	},
 	"background": {
-		"page": "web/background.htm",
+		"page": "ui/background.htm",
 		"persistent": true
 	},
 	"extension": {
@@ -20,9 +20,9 @@
 		}
 	},
 	"minimum_chrome_version": "81.0.0",
-	"options_page": "web/placeholder.htm",
+	"options_page": "ui/placeholder.htm",
 	"options_ui": {
-		"page": "web/options.htm",
+		"page": "ui/options.htm",
 		"open_in_tab": true
 	},
 	"permissions": [

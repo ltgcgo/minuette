@@ -8,12 +8,6 @@ if (!self.agentActive) {
 	let tabId = "-ReplaceThisWithTabId-";
 	let injectedAt = document.readyState;
 	ics.debug(`Injected as tab ${tabId}, on ${injectedAt}.`);
-	// Attempt to connect to the extension backend
-	let connection, refreshConnection = function () {
-		connection = chrome.runtime.connect();
-		connection.onMessage.addListener(receiver);
-		connection.onDisconnect.addListener(refreshConnection);
-	};
 	// Prepare for injection and communication
 	let pageId = "", connectionId = "", primitive = new Uint8Array(16);
 	self.crypto.getRandomValues(primitive);
@@ -25,20 +19,8 @@ if (!self.agentActive) {
 		pageId += map[e % 64];
 	});
 	ics.debug("Exchanging information with extension channel: " + pageId);
-	// Message exchange with the page
-	let bridgeConnection = new BroadcastChannel(connectionId);
-	bridgeConnection.onmessage = function (msg) {
-		let data = msg.data;
-		if (data.noExt) {
-			console.info(data);
-		} else {
-			msg.data.cid = extChannel;
-			connection.postMessage(JSON.stringify(msg.data));
-		};
-	};
-	ics.debug(`Cross-context listening running on extension side: ${connectionId}`);
 	// Generic extension private message receiver
-	/*let receiver = function (data) {
+	let receiver = function (data) {
 		if (data.slice(0, 13) == "\"use strict\";") {
 			if (!self.minuetteOn) {
 				ics.debug(`Injection payload received.`);
@@ -56,9 +38,29 @@ if (!self.agentActive) {
 			};
 		};
 	};
-	refreshConnection();*/
+	// Attempt to connect to the extension backend
+	let connection, refreshConnection = function () {
+		connection = chrome.runtime.connect();
+		ics.debug(`Connection refreshed.`);
+		ics.debug(`%o`, connection);
+		connection.onMessage.addListener(receiver);
+		connection.onDisconnect.addListener(refreshConnection);
+	};
+	refreshConnection();
+	// Message exchange with the page
+	let bridgeConnection = new BroadcastChannel(connectionId);
+	bridgeConnection.onmessage = function (msg) {
+		let data = msg.data;
+		if (data.noExt) {
+			console.info(data);
+		} else {
+			msg.data.cid = extChannel;
+			connection.postMessage(JSON.stringify(msg.data));
+		};
+	};
+	ics.debug(`Cross-context listening running on extension side: ${connectionId}`);
 	// Signal Minuette the launch of injection agent
-	connection.postMessage(JSON.stringify({event: "pageStart", pid: pageId, url: location.href, tid: tabId, readyState: injectedAt}));
+	connection.postMessage(JSON.stringify({e: "pageBegin", p: pageId, u: location.href, t: tabId, readyState: injectedAt}));
 	// Generic extension public message receiver
 	let pubReceiver = function (data) {
 		let msg = JSON.parse(data);
@@ -73,10 +75,10 @@ if (!self.agentActive) {
 	chrome.runtime.onMessage.addListener(pubReceiver);
 	// Signal Minuette if the page closes
 	addEventListener("beforeunload", function () {
-		connection.postMessage(JSON.stringify({event: "pageEnd", pid: pageId, url: location.href, tid: tabId}));
+		connection.postMessage(JSON.stringify({e: "pageEnd", p: pageId, u: location.href, t: tabId}));
 	});
 	// Exchange heartbeats
-	let keepaliveMsg = JSON.stringify({event: "pageKeep", pid: pageId, url: location.href, tid: tabId});
+	let keepaliveMsg = JSON.stringify({e: "pageKeep", p: pageId, u: location.href, t: tabId});
 	self.keepaliveTask = setInterval(function () {
 		connection.postMessage(keepaliveMsg);
 	}, 4000);

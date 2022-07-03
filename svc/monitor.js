@@ -10,6 +10,9 @@ self.injector = {}, self.listeners = {}, self.inTabs = {}, self.inPages = {};
 // URL filtering
 let notInternal = function (urlT) {
 	let url = new URL(urlT);
+	if (urlT == "about:blank") {
+		return true;
+	};
 	if (internalProtocols.indexOf(url.protocol) > -1) {
 		return false;
 	};
@@ -17,37 +20,44 @@ let notInternal = function (urlT) {
 };
 
 // Page message processor
-listeners.pageMsg = async function (conn) {
+listeners.pageMsg = function (conn) {
 	conn.postMessage(injector.payload);
 	conn.onMessage.addListener(async function (data) {
 		let msg = JSON.parse(data);
 		switch (msg.e) {
 			case "pageBegin":
 			case "pageKeep": {
-				inTabs[msg.t] = msg.p;
+				inTabs[msg.t].add(msg.p);
 				if (!inPages[msg.p]) {
+					conn.page = msg.p;
 					inPages[msg.p] = {port: conn, elements: {}, tab: msg.t};
-					inPages[msg.p].port.pid = msg.p;
+					//inPages[msg.p].port.page = msg.p;
 					inPages[msg.p].url = new URL(msg.u);
-					inPages[msg.p].ts = Date.now();
 				};
+				inPages[msg.p].ts = Date.now();
 				break;
 			};
 			case "pageEnd": {
+				listeners.pageClose({id: conn.page});
 				break;
+			};
+			default: {
+				ics.debug(msg);
 			};
 		};
 	});
 };
+browser.runtime.onConnect.addListener(listeners.pageMsg);
+browser.runtime.onMessage.addListener(listeners.pageMsg);
 
 // Tab load
 browser.webNavigation.onCommitted.addListener(async function (data) {
 	if (notInternal(data.url)) {
 		//ics.debug(`Tab opened: %o`, data);
-		inTabs[data.id] = new Set();
+		inTabs[data.tabId] = new Set();
 		listeners.tabOpen(await browser.tabs.get(data.tabId));
 	} else {
-		//ics.debug(`Ignore opened internal tab: %o`, data);
+		ics.debug(`Ignore opened internal tab: %o`, data);
 	};
 });
 listeners.tabOpen = async function (data) {
@@ -56,8 +66,28 @@ listeners.tabOpen = async function (data) {
 };
 
 // Tab unload
-listeners.pageClose = async function (data) {};
-listeners.tabClose = async function (data) {};
+listeners.pageClose = async function (data) {
+	let pid = data.id;
+	inPages[pid].port.disconnect();
+	let tid = inPages[pid].tab;
+	if (inTabs[tid].has(pid)) {
+		inTabs[tid].delete(pid);
+	};
+	if (inTabs[tid].size < 1) {
+		delete inTabs[tid];
+		ics.debug(`Dead tab ${tid} removed.`);
+	};
+	delete inPages[pid];
+	ics.debug(`Dead page ${pid} removed.`);
+};
+listeners.tabClose = async function (data) {
+	/* inTabs[data.id].forEach(function (e, i, a) {
+		inPages[e].port.disconnect();
+		delete inPages[e];
+		a.delete(e);
+		ics.debug(`Closed page ${e} in tab ${data.id} removed.`);
+	}); */
+};
 browser.webNavigation.onBeforeNavigate.addListener(async function (data) {
 	if (notInternal(data.url)) {
 		//ics.debug(`Tab closed: %o`, data);
@@ -88,17 +118,7 @@ let heartbeat = setInterval(async function () {
 	let ts = Date.now();
 	for (let pid in inPages) {
 		if (ts - inPages[pid].ts > 15000) {
-			inPages[pid].port.disconnect();
-			let tid = inPages.tab;
-			if (inTabs[tid] && inTabs[tid].has(pid)) {
-				inTabs[tid].delete(pid);
-			};
-			if (inTabs[tid].size < 1) {
-				delete inTabs[tid];
-				ics.debug(`Dead tab ${tid} removed.`);
-			};
-			delete inPages[pid];
-			ics.debug(`Dead page ${pid} removed.`);
+			listeners.pageClose({id: pid});
 		};
 	};
 }, 10000);

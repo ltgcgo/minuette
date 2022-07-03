@@ -19,5 +19,5 @@ ls -1 js | while IFS= read -r jsf ; do
 done
 echo Live rebuilding injection services...
 mkdir -p build/svc
-esbuild --bundle svc/ics.js --bundle svc/monitor.js --outdir=build/svc --sourcemap --watch --minify-whitespace --minify-syntax
+esbuild --bundle svc/ics.js --bundle svc/monitor.js --bundle svc/agent.js --bundle svc/minuette.js --outdir=build/svc --sourcemap --watch --minify-whitespace --minify-syntax
 exit

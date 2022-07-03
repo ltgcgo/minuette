@@ -5,7 +5,7 @@ Compatible with both Chromium and Firefox.
 
 ## Dependencies
 * WebExtension API polyfill
-* Deno
+* [Deno](https://deno.land/) (not included)
 * ESBuild
 
 ## Features & Roadmap

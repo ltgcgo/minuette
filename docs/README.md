@@ -27,11 +27,11 @@ This is the documentation for Minuette. All APIs are available under the global 
   - [ ] Silent write reject
   - [ ] Silent write modification
 * Event listeners
-  - [ ] Intercept
-  - [ ] Track
+  - [x] Intercept
+  - [x] Track
   - [ ] Remove
   - [ ] Silent reject
-  - [ ] Visualize
+  - [x] Visualize
   - [ ] Cheat trigger
 * Form Data
   - [ ] Intercept

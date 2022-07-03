@@ -18,7 +18,7 @@ ls -1 js | while IFS= read -r jsf ; do
 	esbuild --bundle "css/${jsf}/index.css" --outfile=build/ui/css/${jsf}.css --minify
 done
 mkdir -p build/svc
-esbuild --bundle svc/ics.js --bundle svc/monitor.js --outdir=build/svc --minify
+esbuild --bundle svc/ics.js --bundle svc/monitor.js --bundle svc/agent.js --bundle svc/minuette.js --outdir=build/svc --minify
 echo Packing into ZIP files...
 mkdir -p dist
 rm -rfv dist/*

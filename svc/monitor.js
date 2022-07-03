@@ -27,6 +27,9 @@ listeners.pageMsg = function (conn) {
 		switch (msg.e) {
 			case "pageBegin":
 			case "pageKeep": {
+				if (!inTabs[msg.t]) {
+					inTabs[msg.t] = new Set();
+				};
 				inTabs[msg.t].add(msg.p);
 				if (!inPages[msg.p]) {
 					conn.page = msg.p;
@@ -39,6 +42,15 @@ listeners.pageMsg = function (conn) {
 			};
 			case "pageEnd": {
 				listeners.pageClose({id: conn.page});
+				break;
+			};
+			case "evAdd": {
+				break;
+			};
+			case "evTrig": {
+				break;
+			};
+			case "evDel": {
 				break;
 			};
 			default: {
@@ -61,7 +73,12 @@ browser.webNavigation.onCommitted.addListener(async function (data) {
 	};
 });
 listeners.tabOpen = async function (data) {
-	browser.tabs.executeScript(data.id, {code: injector.agent.replace("-ReplaceThisWithTabId-", data.id), allFrames: true, runAt: "document_start"});
+	browser.tabs.executeScript(data.id, {
+		code: injector.agent.replace("-ReplaceThisWithTabId-", data.id),
+		allFrames: true,
+		runAt: "document_start",
+		matchAboutBlank: true
+	});
 	ics.debug(`Injection active on tab ${data.id}(${data.url}).`);
 };
 
@@ -119,6 +136,12 @@ let heartbeat = setInterval(async function () {
 	for (let pid in inPages) {
 		if (ts - inPages[pid].ts > 15000) {
 			listeners.pageClose({id: pid});
+		};
+	};
+	for (let tid in inTabs) {
+		if (inTabs[tid].size < 1) {
+			delete inTabs[tid];
+			ics.debug(`Removed dead tab ${tid}.`);
 		};
 	};
 }, 10000);

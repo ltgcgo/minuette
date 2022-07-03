@@ -57,7 +57,7 @@ browser.webNavigation.onCommitted.addListener(async function (data) {
 		inTabs[data.tabId] = new Set();
 		listeners.tabOpen(await browser.tabs.get(data.tabId));
 	} else {
-		ics.debug(`Ignore opened internal tab: %o`, data);
+		ics.debug(`Ignore opened internal tab ${data.tabId}(${data.url}).`);
 	};
 });
 listeners.tabOpen = async function (data) {

@@ -1,6 +1,5 @@
 "use strict";
 import {ics} from "./ics.js";
-ics.level = 3;
 const map = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
 
 if (!self.agentActive) {
@@ -34,7 +33,7 @@ if (!self.agentActive) {
 		} else {
 			ics.debug("Received command: " + data);
 			let msg = JSON.parse(data);
-			switch (msg.event) {
+			switch (msg.e) {
 			};
 		};
 	};
@@ -42,7 +41,6 @@ if (!self.agentActive) {
 	let connection, refreshConnection = function () {
 		connection = chrome.runtime.connect();
 		ics.debug(`Connection refreshed.`);
-		ics.debug(`%o`, connection);
 		connection.onMessage.addListener(receiver);
 		connection.onDisconnect.addListener(refreshConnection);
 	};
@@ -52,10 +50,12 @@ if (!self.agentActive) {
 	bridgeConnection.onmessage = function (msg) {
 		let data = msg.data;
 		if (data.noExt) {
-			console.info(data);
+			ics.debug(data);
 		} else {
-			msg.data.cid = extChannel;
-			connection.postMessage(JSON.stringify(msg.data));
+			data.c = connectionId;
+			data.p = pageId;
+			data.t = tabId;
+			connection.postMessage(JSON.stringify(data));
 		};
 	};
 	ics.debug(`Cross-context listening running on extension side: ${connectionId}`);
@@ -64,7 +64,7 @@ if (!self.agentActive) {
 	// Generic extension public message receiver
 	let pubReceiver = function (data) {
 		let msg = JSON.parse(data);
-		switch (msg.event) {
+		switch (msg.e) {
 			case "monitorDisconnect":
 			case "monitorConnect":
 			default: {

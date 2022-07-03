@@ -17,6 +17,8 @@ This is the documentation for Minuette. All APIs are available under the global 
   - [ ] Silent reading modification
   - [ ] Silent measurement reject
   - [ ] Silent measurement modification
+* Console
+  - [x] Intercept
 * Cookie
 * Clipboard
   - [ ] Intercept

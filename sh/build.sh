@@ -15,7 +15,7 @@ ls -1 js | while IFS= read -r jsf ; do
 done
 mkdir -p build/ui/css
 ls -1 js | while IFS= read -r jsf ; do
-	esbuild --bundle "css/${jsf}/index.css" --outfile=build/ui/js/${jsf}.css --minify
+	esbuild --bundle "css/${jsf}/index.css" --outfile=build/ui/css/${jsf}.css --minify
 done
 mkdir -p build/svc
 esbuild --bundle svc/ics.js --bundle svc/monitor.js --outdir=build/svc --minify

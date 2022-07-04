@@ -44,12 +44,12 @@ listeners.pageMsg = function (conn) {
 				listeners.pageClose({id: conn.page});
 				break;
 			};
-			/*case "evAdd": {
+			case "evAdd": {
 				break;
 			};
 			case "evTrig": {
 				break;
-			};*/
+			};
 			case "evDel": {
 				break;
 			};

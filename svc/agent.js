@@ -33,7 +33,11 @@ if (!self.agentActive) {
 		} else {
 			ics.debug("Received command: " + data);
 			let msg = JSON.parse(data);
-			switch (msg.e) {
+			if (msg.a) {
+				switch (msg.e) {
+				};
+			} else {
+				bridgeConnection.postMessage(msg);
 			};
 		};
 	};

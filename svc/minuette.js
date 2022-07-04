@@ -54,6 +54,11 @@ self.fakeScreenVideo = undefined;
 	fakeNative(HTMLElement.prototype.addEventListener);
 	HTMLElement.prototype.addEventListener = fakeAddEl;
 	document.addEventListener = fakeAddEl;
+	// No visibility change reading, not until you permit
+	let setHidden = false;
+	Object.defineProperty(document, "hidden", {get: function () {
+		return setHidden;
+	}});
 	// Hijack screen reading
 	let realScreen = self.screen, fakeScreenWidth, fakeScreenHeight;
 	self.screen = new Proxy(self.screen, {get: function (obj, prop) {
@@ -83,13 +88,13 @@ self.fakeScreenVideo = undefined;
 			};
 		};
 	}});
-	/*screen.orientation = */
 	let navMedDev = navigator.mediaDevices,
 	getDispMed = navMedDev.getDisplayMedia,
 	getUserMed = navMedDev.getUserMedia;
 	// Extension channel message
 	let extChannel = new BroadcastChannel("-ReplaceMeWithSomethingUnique-");
-	extChannel.onmessage = function (msg) {
+	extChannel.onmessage = function (data) {
+		let msg = data.data;
 		switch (msg.e) {
 			case "apiExpose": {
 				self.Minuette = new Proxy(Minuet, {});
@@ -99,6 +104,10 @@ self.fakeScreenVideo = undefined;
 			case "apiHide": {
 				delete self.Minuette;
 				ics.debug("API hidden.");
+			};
+			case "setHidden": {
+				setHidden = msg.status || false;
+				break;
 			};
 			default: {
 				ics.debug(msg);

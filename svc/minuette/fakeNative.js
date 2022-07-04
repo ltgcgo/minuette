@@ -4,7 +4,7 @@ TSt = Symbol(); // Original toString
 let noToStr = function () {
 	return fakeNativeCode.replace("FuncName", this.name);
 };
-let fakeNative = function (func) {
+let fakeNative = function toString (func) {
 	if (!func[TSt]) {
 		func[TSt] = func.toString;
 		func.toString = noToStr;

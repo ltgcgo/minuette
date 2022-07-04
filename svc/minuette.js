@@ -4,6 +4,7 @@ import {fakeNative} from "./minuette/fakeNative.js";
 import {getCSSSelector} from "./minuette/cssSelector.js"
 import {getRandom} from "./minuette/getRandom.js";
 import {getEventFamily, getEventData} from "./minuette/eventData.js"
+self.blacklistEvent = ["visibilitychange"];
 {
 	// Constants
 	const selectorSkip = ["id", "class"],
@@ -29,7 +30,7 @@ import {getEventFamily, getEventData} from "./minuette/eventData.js"
 	};
 	// Event listener hijack
 	let addEL = HTMLElement.prototype.addEventListener;
-	HTMLElement.prototype.addEventListener = function addEventListener (type, listener, options) {
+	let fakeAddEl = function addEventListener (type, listener, options) {
 		let upThis = this;
 		listener[UID] = listener[UID] || getRandom(uniqueLen);
 		this[UID] = this[UID] || getRandom(uniqueLen);
@@ -37,7 +38,7 @@ import {getEventFamily, getEventData} from "./minuette/eventData.js"
 		let result = addEL.apply(this, [type, function (event) {
 			let msgObj = {e: "evTrig", type: event.type, func: listener[UID], element: this[UID], selector: getCSSSelector(this)};
 			msgObj.origin = event.target[UID];
-			if (true) {
+			if (blacklistEvent.indexOf(event.type) == -1) {
 				listener(event);
 				msgObj.suppressed = false;
 			} else {
@@ -49,6 +50,10 @@ import {getEventFamily, getEventData} from "./minuette/eventData.js"
 		return result;
 	};
 	fakeNative(HTMLElement.prototype.addEventListener);
+	HTMLElement.prototype.addEventListener = fakeAddEl;
+	document.addEventListener = fakeAddEl;
+	// Hijack several document APIs
+	let realDocument = self.document;
 	// Extension channel message
 	let extChannel = new BroadcastChannel("-ReplaceMeWithSomethingUnique-");
 	extChannel.onmessage = function (msg) {

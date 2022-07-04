@@ -1,7 +1,7 @@
 "use strict";
 // Get the CSS selector of an element
 let getCSSSelector = function (element, includeSmart) {
-	let text = element.tagName.toLowerCase();
+	let text = (element.tagName || "null").toLowerCase();
 	if (element.id) {
 		text += "#" + element.id;
 	};

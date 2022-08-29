@@ -62,7 +62,7 @@ self.fakeScreenVideo = undefined;
 					};
 					let rejector = function (reason) {
 						extChannel.postMessage({e: "asyncFail", id: upThis[UID], data: reason, parent: upThis[PUID]});
-						reject(value);
+						reject(reason);
 					};
 					if (executor) {
 						executor(resolver, rejector);
@@ -77,10 +77,10 @@ self.fakeScreenVideo = undefined;
 			let upThis = this;
 			let result = new Promise(this.#realPromise.then(function (value) {
 				extChannel.postMessage({e: "asyncDone", id: result[UID], data: smartClone(value), parent: upThis[UID]});
-				success(value);
+				return success(value);
 			}, function (reason) {
 				extChannel.postMessage({e: "asyncFail", id: result[UID], data: reason, parent: upThis[UID]});
-				failure(reason);
+				return failure(reason);
 			}));
 			extChannel.postMessage({e: "asyncThen", id: result[UID], parent: this[UID]});
 			result[PUID] = this[UID];
@@ -90,7 +90,7 @@ self.fakeScreenVideo = undefined;
 			let upThis = this;
 			let result = new Promise(this.#realPromise.catch(function (reason) {
 				extChannel.postMessage({e: "asyncFail", id: result[UID], data: reason, parent: upThis[UID]});
-				failure(reason);
+				return failure(reason);
 			}));
 			extChannel.postMessage({e: "asyncCatch", id: result[UID], parent: this[UID]});
 			result[PUID] = this[UID];
@@ -100,7 +100,7 @@ self.fakeScreenVideo = undefined;
 			let upThis = this;
 			let result = new Promise(this.#realPromise.finally(function () {
 				extChannel.postMessage({e: "asyncFinish", id: result[UID], parent: upThis[UID]});
-				final();
+				return final();
 			}));
 			extChannel.postMessage({e: "asyncFinal", id: result[UID], parent: this[UID]});
 			result[PUID] = this[UID];
@@ -111,7 +111,7 @@ self.fakeScreenVideo = undefined;
 			let msg = {e: "promAll", id: result[UID], data: []};
 			arr?.forEach(function (e) {
 				if (e?.constructor == Promise) {
-					msg.data.push(e[UID]);
+					msg.data.push(`Promise#${e[UID]}`);
 				} else {
 					msg.data.push(smartClone(e));
 				};

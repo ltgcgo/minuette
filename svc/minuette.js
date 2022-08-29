@@ -42,6 +42,19 @@ self.fakeScreenVideo = undefined;
 	};
 	// Promise tracking
 	Minuet.promise = Promise;
+	let promIter = function (type, name, arr) {
+		let result = new Promise(Minuet.promise[type](arr));
+		let msg = {e: `prom${name}`, id: result[UID], data: []};
+		arr?.forEach(function (e) {
+			if (e?.constructor == Promise) {
+				msg.data.push(`Promise#${e[UID]}`);
+			} else {
+				msg.data.push(smartClone(e));
+			};
+		});
+		extChannel.postMessage(msg);
+		return result;
+	};
 	self.Promise = class Promise {
 		#realPromise;
 		constructor(executor) {
@@ -107,15 +120,25 @@ self.fakeScreenVideo = undefined;
 			return result;
 		};
 		static all(arr) {
-			let result = new Promise(Minuet.promise.all(arr));
-			let msg = {e: "promAll", id: result[UID], data: []};
-			arr?.forEach(function (e) {
-				if (e?.constructor == Promise) {
-					msg.data.push(`Promise#${e[UID]}`);
-				} else {
-					msg.data.push(smartClone(e));
-				};
-			});
+			return promIter("all", "All", arr);
+		};
+		static allSettled(arr) {
+			return promIter("allSettled", "Settle", arr);
+		};
+		static any(arr) {
+			return promIter("any", "Any", arr);
+		};
+		static race(arr) {
+			return promIter("race", "Race", arr);
+		};
+		static reject(value) {
+			let result = new Promise(Minuet.promise.reject(value));
+			let msg = {e: "promReject", id: result[UID]};
+			if (value?.constructor == Minuet.promise) {
+				msg.data = `Promise#${value[UID]}`;
+			} else {
+				msg.data = smartClone(value);
+			};
 			extChannel.postMessage(msg);
 			return result;
 		};

@@ -25,6 +25,38 @@ listeners.pageMsg = function (conn) {
 	conn.onMessage.addListener(async function (data) {
 		let msg = JSON.parse(data);
 		switch (msg.e) {
+			case "console": {
+				switch (msg.level) {
+					case "debug": {
+						console.debug(`${msg.t}(${msg.c}):\n`, ...msg.log);
+						break;
+					};
+					case "error": {
+						console.error(`${msg.t}(${msg.c}):\n`, ...msg.log);
+						break;
+					};
+					case "info": {
+						console.info(`${msg.t}(${msg.c}):\n`, ...msg.log);
+						break;
+					};
+					case "log": {
+						console.log(`${msg.t}(${msg.c}):\n`, ...msg.log);
+						break;
+					};
+					case "warn": {
+						console.warn(`${msg.t}(${msg.c}):\n`, ...msg.log);
+						break;
+					};
+					default: {
+						console.debug(`Log level ${msg.level} from ${msg.t}(${msg.c}/${msg.p}):\n`, ...msg.log);
+					};
+				};
+				break;
+			};
+			case "pageErr": {
+				console.error(`${msg.t}(${msg.c}) (${msg.from}):\n${msg.type}${msg.log}`);
+				break;
+			};
 			case "pageBegin":
 			case "pageKeep": {
 				if (!inTabs[msg.t]) {

@@ -5,9 +5,10 @@ import {getCSSSelector} from "./minuette/cssSelector.js";
 import {getRandom} from "./minuette/getRandom.js";
 import {getEventFamily, getEventData} from "./minuette/eventData.js";
 import {fakeScreen, fakeCamera} from "./minuette/fakeStream.js";
-self.blacklistEvent = ["visibilitychange"];
+self.blacklistEvent = ["visibilitychange", "pagehide", "pageshow"];
 self.fakeScreenVideo = undefined;
 {
+	let extDataId = "-ReplaceMeWithSomethingUnique-";
 	// Constants
 	const selectorSkip = ["id", "class"],
 	EL = Symbol(), // Event listeners
@@ -22,14 +23,23 @@ self.fakeScreenVideo = undefined;
 	{
 		self.console = {};
 		for (let name in Minuet.console) {
-			self.console[name] = function () {
+			self.console[name] = function (...args) {
 				// This can be fingerprinted by blank function names. Beware.
-				extChannel.postMessage({e: "console", level: name, log: Array.from(arguments)});
-				Minuet.console[name](...arguments);
+				Minuet.console[name](...args);
+				/*args.forEach(function (e, i, a) {
+					a[i] = JSON.parse(JSON.stringify(e));
+				});*/
+				extChannel.postMessage({e: "console", level: name, log: args});
 			};
 			fakeNative(self.console[name]);
 		};
 	};
+	// Page error capturing
+	self.addEventListener("error", function (event) {
+		//console.debug("Before capture");
+		extChannel.postMessage({e: "pageErr", type: event.type, log: event.message, from: event.filename});
+		//console.debug("After capture");
+	});
 	// Event listener hijack
 	let addEL = HTMLElement.prototype.addEventListener;
 	let fakeAddEl = function addEventListener (type, listener, options) {
@@ -92,7 +102,7 @@ self.fakeScreenVideo = undefined;
 	getDispMed = navMedDev.getDisplayMedia,
 	getUserMed = navMedDev.getUserMedia;
 	// Extension channel message
-	let extChannel = new BroadcastChannel("-ReplaceMeWithSomethingUnique-");
+	let extChannel = new BroadcastChannel(extDataId);
 	extChannel.onmessage = function (data) {
 		let msg = data.data;
 		switch (msg.e) {
@@ -171,5 +181,5 @@ self.fakeScreenVideo = undefined;
 		extChannel.postMessage({e: "getDisplay", success: true, stream: stream.id, task: proxyScreen});
 		return newStream;
 	};
+	ics.debug(`Minuette launched as ${extDataId}.`);
 };
-ics.debug("Minuette launched.");

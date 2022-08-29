@@ -27,6 +27,7 @@ This is the documentation for Minuette. All APIs are available under the global 
   - [ ] Silent write reject
   - [ ] Silent write modification
 * Event listeners
+  - [x] Global rejection
   - [x] Intercept
   - [x] Track
   - [ ] Remove
@@ -35,6 +36,9 @@ This is the documentation for Minuette. All APIs are available under the global 
   - [ ] Cheat trigger
 * Form Data
   - [ ] Intercept
+* History
+  - [ ] Intercept
+  - [ ] Silent reject
 * IndexedDB (difficult to implement)
 * LocalStorage, SessionStorage
 * Media

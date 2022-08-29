@@ -22,13 +22,16 @@ if (!self.agentActive) {
 	let receiver = function (data) {
 		if (data.slice(0, 13) == "\"use strict\";") {
 			if (!self.minuetteOn) {
-				ics.debug(`Injection payload received.`);
+				ics.debug(`Injection payload received when ${document.readyState}.`);
 				let loader = document.createElement("script");
 				let injectData = data.replace("-ReplaceMeWithSomethingUnique-", connectionId);
 				let blobUri = URL.createObjectURL(new Blob([injectData]));
 				loader.src = blobUri;
 				document.head.appendChild(loader);
 				self.minuetteOn = document.readyState;
+				loader.onload = function () {
+					ics.info(`Minuette loaded when ${minuetteOn} as ${connectionId}.`);
+				};
 			};
 		} else {
 			ics.debug("Received command: " + data);

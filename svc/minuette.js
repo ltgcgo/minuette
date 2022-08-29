@@ -17,6 +17,9 @@ self.fakeScreenVideo = undefined;
 	const uniqueLen = 16; // How unique should IDs be
 	// Namespace for Minuette
 	let Minuet = {}, RawApi = {};
+	// Config for Minuette
+	let MinConf = {};
+	MinConf.h = {g: 1, f: 1, b: 1, p: 0, r: 0}; // History API
 	// Original console API exposure
 	Minuet.console = console;
 	// Console hijack
@@ -31,6 +34,7 @@ self.fakeScreenVideo = undefined;
 				});*/
 				extChannel.postMessage({e: "console", level: name, log: args});
 			};
+			Object.defineProperty(console[name], "name", {value: name});
 			fakeNative(self.console[name]);
 		};
 	};
@@ -123,6 +127,78 @@ self.fakeScreenVideo = undefined;
 				ics.debug(msg);
 			};
 		};
+	};
+	// History API
+	Minuet.history = self.history;
+	{
+		let replaceState = function (stateObj, unused, url = "./") {
+			let msg = {e: "historySet", data: stateObj, target: url, suppressed: true};
+			if (MinConf.h.r) {
+				Minuet.history.replaceState(stateObj, unused, url);
+				msg.suppressed = false;
+			};
+			extChannel.postMessage(msg);
+		};
+		let pushState = function (stateObj, unused, url = "./") {
+			let msg = {e: "historyAdd", data: stateObj, target: url, suppressed: true};
+			if (MinConf.h.p) {
+				Minuet.history.pushState(stateObj, unused, url);
+				msg.suppressed = false;
+			};
+			extChannel.postMessage(msg);
+		};
+		let go = function (delta = 0) {
+			let msg = {e: "historyGo", data: delta, suppressed: true};
+			if (MinConf.h.g) {
+				Minuet.history.go(delta);
+				msg.suppressed = false;
+			};
+			extChannel.postMessage(msg);
+		};
+		let back = function (delta = 0) {
+			let msg = {e: "historyGo", data: -1, suppressed: true};
+			if (MinConf.h.b) {
+				Minuet.history.back();
+				msg.suppressed = false;
+			};
+			extChannel.postMessage(msg);
+		};
+		let forward = function (delta = 0) {
+			let msg = {e: "historyGo", data: 1, suppressed: true};
+			if (MinConf.h.f) {
+				Minuet.history.forward();
+				msg.suppressed = false;
+			};
+			extChannel.postMessage(msg);
+		};
+		fakeNative(replaceState);
+		Object.defineProperty(self, "history", {value: new Proxy(self.history, {get: function (obj, prop) {
+			switch (prop) {
+				case "back": {
+					return back;
+					break;
+				};
+				case "forward": {
+					return forward;
+					break;
+				};
+				case "go": {
+					return go;
+					break;
+				};
+				case "pushState": {
+					return pushState;
+					break;
+				};
+				case "replaceState": {
+					return replaceState;
+					break;
+				};
+				default: {
+					return obj[prop];
+				};
+			};
+		}})});
 	};
 	// Hijack display capture
 	navigator.mediaDevices.getDisplayMedia = async function () {

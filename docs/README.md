@@ -37,8 +37,9 @@ This is the documentation for Minuette. All APIs are available under the global 
 * Form Data
   - [ ] Intercept
 * History
-  - [ ] Intercept
-  - [ ] Silent reject
+  - [x] Intercept
+  - [x] Silent reject
+  - [ ] Trigger
 * IndexedDB (difficult to implement)
 * LocalStorage, SessionStorage
 * Media

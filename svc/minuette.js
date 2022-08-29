@@ -5,6 +5,7 @@ import {getCSSSelector} from "./minuette/cssSelector.js";
 import {getRandom} from "./minuette/getRandom.js";
 import {getEventFamily, getEventData} from "./minuette/eventData.js";
 import {fakeScreen, fakeCamera} from "./minuette/fakeStream.js";
+import {smartClone} from "./minuette/smartClone.js";
 self.blacklistEvent = ["visibilitychange", "pagehide", "pageshow"];
 self.fakeScreenVideo = undefined;
 {
@@ -13,7 +14,8 @@ self.fakeScreenVideo = undefined;
 	const selectorSkip = ["id", "class"],
 	EL = Symbol(), // Event listeners
 	ELs = {}, // Tracking overall event listeners
-	UID = Symbol(); // Unique ID for tracked objects
+	UID = Symbol(), // Unique ID for tracked objects
+	PUID = Symbol(); // Reference of the parent
 	const uniqueLen = 16; // How unique should IDs be
 	// Namespace for Minuette
 	let Minuet = {}, RawApi = {};
@@ -29,20 +31,114 @@ self.fakeScreenVideo = undefined;
 			self.console[name] = function (...args) {
 				// This can be fingerprinted by blank function names. Beware.
 				Minuet.console[name](...args);
-				/*args.forEach(function (e, i, a) {
-					a[i] = JSON.parse(JSON.stringify(e));
-				});*/
+				args.forEach(function (e, i, a) {
+					a[i] = smartClone(e);
+				});
 				extChannel.postMessage({e: "console", level: name, log: args});
 			};
 			Object.defineProperty(console[name], "name", {value: name});
 			fakeNative(self.console[name]);
 		};
 	};
+	// Promise tracking
+	Minuet.promise = Promise;
+	self.Promise = class Promise {
+		#realPromise;
+		constructor(executor) {
+			let upThis = this;
+			this[UID] = getRandom(uniqueLen);
+			if (executor.constructor == Minuet.promise) {
+				//extChannel.postMessage({e: "asyncChain", id: this[UID]});
+				this.#realPromise = executor;
+			} else if (executor.constructor == Promise) {
+				ics.error(`Recursive promise capsulation.`);
+			} else {
+				extChannel.postMessage({e: "asyncNew", id: this[UID]});
+				this.#realPromise = new Minuet.promise(function (resolve, reject) {
+					extChannel.postMessage({e: "asyncRun", id: upThis[UID]});
+					let resolver = function (value) {
+						extChannel.postMessage({e: "asyncDone", id: upThis[UID], data: smartClone(value), parent: upThis[PUID]});
+						resolve(value);
+					};
+					let rejector = function (reason) {
+						extChannel.postMessage({e: "asyncFail", id: upThis[UID], data: reason, parent: upThis[PUID]});
+						reject(value);
+					};
+					if (executor) {
+						executor(resolver, rejector);
+					};
+				});
+			};
+			this.#realPromise[UID] = this[UID];
+		};
+		then(success, failure = function (reason) {
+			throw(reason);
+		}) {
+			let upThis = this;
+			let result = new Promise(this.#realPromise.then(function (value) {
+				extChannel.postMessage({e: "asyncDone", id: result[UID], data: smartClone(value), parent: upThis[UID]});
+				success(value);
+			}, function (reason) {
+				extChannel.postMessage({e: "asyncFail", id: result[UID], data: reason, parent: upThis[UID]});
+				failure(reason);
+			}));
+			extChannel.postMessage({e: "asyncThen", id: result[UID], parent: this[UID]});
+			result[PUID] = this[UID];
+			return result;
+		};
+		catch(failure) {
+			let upThis = this;
+			let result = new Promise(this.#realPromise.catch(function (reason) {
+				extChannel.postMessage({e: "asyncFail", id: result[UID], data: reason, parent: upThis[UID]});
+				failure(reason);
+			}));
+			extChannel.postMessage({e: "asyncCatch", id: result[UID], parent: this[UID]});
+			result[PUID] = this[UID];
+			return result;
+		};
+		finally(final) {
+			let upThis = this;
+			let result = new Promise(this.#realPromise.finally(function () {
+				extChannel.postMessage({e: "asyncFinish", id: result[UID], parent: upThis[UID]});
+				final();
+			}));
+			extChannel.postMessage({e: "asyncFinal", id: result[UID], parent: this[UID]});
+			result[PUID] = this[UID];
+			return result;
+		};
+		static all(arr) {
+			let result = new Promise(Minuet.promise.all(arr));
+			let msg = {e: "promAll", id: result[UID], data: []};
+			arr?.forEach(function (e) {
+				if (e?.constructor == Promise) {
+					msg.data.push(e[UID]);
+				} else {
+					msg.data.push(smartClone(e));
+				};
+			});
+			extChannel.postMessage(msg);
+			return result;
+		};
+		static resolve(value) {
+			let result = new Promise(Minuet.promise.resolve(value));
+			let msg = {e: "promResolve", id: result[UID]};
+			if (value?.constructor == Minuet.promise) {
+				msg.data = `Promise#${value[UID]}`;
+			} else {
+				msg.data = smartClone(value);
+			};
+			extChannel.postMessage(msg);
+			return result;
+		};
+	};
+	Object.defineProperty(self.Promise, "name", {value: "Promise"});
+	fakeNative(self.Promise);
 	// Page error capturing
 	self.addEventListener("error", function (event) {
-		//console.debug("Before capture");
-		extChannel.postMessage({e: "pageErr", type: event.type, log: event.message, from: event.filename});
-		//console.debug("After capture");
+		extChannel.postMessage({e: "pageErr", type: event.type, promise: false, log: event.message, from: event.filename});
+	});
+	self.addEventListener("unhandledrejection", function (event) {
+		extChannel.postMessage({e: "pageErr", type: "promise", promise: event.promise[UID], log: event.reason?.stack || event.reason, from: event.promise[UID]});
 	});
 	// Event listener hijack
 	let addEL = HTMLElement.prototype.addEventListener;
@@ -172,7 +268,15 @@ self.fakeScreenVideo = undefined;
 			extChannel.postMessage(msg);
 		};
 		fakeNative(replaceState);
-		Object.defineProperty(self, "history", {value: new Proxy(self.history, {get: function (obj, prop) {
+		Object.defineProperty(self, "history", {value: new Proxy(self.history, {set: function (obj, prop, value) {
+			if (prop == "scrollRestoration") {
+				let msg = {e: "historySR", data: value};
+				obj[prop] = value;
+				return value;
+			} else {
+				return obj[prop];
+			};
+		}, get: function (obj, prop) {
 			switch (prop) {
 				case "back": {
 					return back;

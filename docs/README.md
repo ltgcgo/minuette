@@ -52,8 +52,10 @@ This is the documentation for Minuette. All APIs are available under the global 
 * Media Devices
 * [Page Visibility](visibility.md)
 * Promise
-  - [ ] Intercept
+  - [x] Intercept
   - [ ] Execution rejection
+  - [x] Relation tracing
+  - [x] Track
   - [ ] Value modification
 * setInterval, setTimeout, requestAnimationFrame
   - [ ] Intercept

@@ -54,7 +54,7 @@ listeners.pageMsg = function (conn) {
 				break;
 			};
 			case "pageErr": {
-				console.error(`${msg.t}(${msg.c}) (${msg.from}):\n${msg.type}${msg.log}`);
+				console.error(`${msg.t}(${msg.c}) ${msg.type} [${msg.from}]:\n${msg.log}`);
 				break;
 			};
 			case "pageBegin":

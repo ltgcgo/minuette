@@ -79,7 +79,7 @@ listeners.pageMsg = function (conn) {
 			case "evAdd": {
 				break;
 			};
-			case "evTrig": {
+			case "evAct": {
 				break;
 			};
 			case "evDel": {

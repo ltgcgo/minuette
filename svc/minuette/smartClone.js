@@ -62,7 +62,7 @@ let smartClone = function (value, step = 0) {
 			case ArrayBuffer: {
 				return {
 					uncloned: "ArrayBuffer",
-					length: value.length
+					length: value.byteLength
 				};
 			};
 			case Function: {
@@ -70,6 +70,34 @@ let smartClone = function (value, step = 0) {
 					uncloned: "function",
 					name: value.name
 				};
+			};
+			case XMLHttpRequest: {
+				let re = {
+					readyState: value.readyState,
+					type: value.responseType || "text",
+					url: value.responseURL,
+					status: value.status,
+					statusText: value.statusText,
+					timeout: value.timeout,
+					withCred: value.withCredentials
+				};
+				switch (re.type) {
+					case "arraybuffer":
+					case "blob":
+					case "json":
+					case "text": {
+						re.data = smartClone(value.response);
+						break;
+					};
+					case "document": {
+						re.data = {uncloned: "document"};
+						break;
+					};
+					default: {
+						re.data = {uncloned: re.type};
+					};
+				};
+				return re;
 			};
 			case Error:
 			case AggregateError:

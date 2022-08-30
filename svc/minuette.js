@@ -23,14 +23,14 @@ self.fakeScreenVideo = undefined;
 	let MinConf = {};
 	MinConf.h = {g: 1, f: 1, b: 1, p: 1, r: 1}; // History API
 	// Original console API exposure
-	Minuet.console = console;
+	RawApi.console = console;
 	// Console hijack
 	{
 		self.console = {};
-		for (let name in Minuet.console) {
+		for (let name in RawApi.console) {
 			self.console[name] = function (...args) {
 				// This can be fingerprinted by blank function names. Beware.
-				Minuet.console[name](...args);
+				RawApi.console[name](...args);
 				args.forEach(function (e, i, a) {
 					a[i] = smartClone(e);
 				});
@@ -41,9 +41,9 @@ self.fakeScreenVideo = undefined;
 		};
 	};
 	// Promise tracking
-	Minuet.promise = Promise;
+	RawApi.promise = Promise;
 	let promIter = function (type, name, arr) {
-		let result = new Promise(Minuet.promise[type](arr));
+		let result = new Promise(RawApi.promise[type](arr));
 		let msg = {e: `prom${name}`, id: result[UID], data: []};
 		arr?.forEach(function (e) {
 			if (e?.constructor == Promise) {
@@ -60,14 +60,14 @@ self.fakeScreenVideo = undefined;
 		constructor(executor) {
 			let upThis = this;
 			this[UID] = getRandom(uniqueLen);
-			if (executor.constructor == Minuet.promise) {
+			if (executor.constructor == RawApi.promise) {
 				//extChannel.postMessage({e: "asyncChain", id: this[UID]});
 				this.#realPromise = executor;
 			} else if (executor.constructor == Promise) {
 				ics.error(`Recursive promise capsulation.`);
 			} else {
 				extChannel.postMessage({e: "asyncNew", id: this[UID]});
-				this.#realPromise = new Minuet.promise(function (resolve, reject) {
+				this.#realPromise = new RawApi.promise(function (resolve, reject) {
 					extChannel.postMessage({e: "asyncRun", id: upThis[UID]});
 					let resolver = function (value) {
 						extChannel.postMessage({e: "asyncDone", id: upThis[UID], data: smartClone(value), parent: upThis[PUID]});
@@ -132,9 +132,9 @@ self.fakeScreenVideo = undefined;
 			return promIter("race", "Race", arr);
 		};
 		static reject(value) {
-			let result = new Promise(Minuet.promise.reject(value));
+			let result = new Promise(RawApi.promise.reject(value));
 			let msg = {e: "promReject", id: result[UID]};
-			if (value?.constructor == Minuet.promise) {
+			if (value?.constructor == RawApi.promise) {
 				msg.data = `Promise#${value[UID]}`;
 			} else {
 				msg.data = smartClone(value);
@@ -143,9 +143,9 @@ self.fakeScreenVideo = undefined;
 			return result;
 		};
 		static resolve(value) {
-			let result = new Promise(Minuet.promise.resolve(value));
+			let result = new Promise(RawApi.promise.resolve(value));
 			let msg = {e: "promResolve", id: result[UID]};
-			if (value?.constructor == Minuet.promise) {
+			if (value?.constructor == RawApi.promise) {
 				msg.data = `Promise#${value[UID]}`;
 			} else {
 				msg.data = smartClone(value);
@@ -164,29 +164,42 @@ self.fakeScreenVideo = undefined;
 		extChannel.postMessage({e: "pageErr", type: "promise", promise: event.promise[UID], log: event.reason?.stack || event.reason, from: event.promise[UID]});
 	});
 	// Event listener hijack
-	/*let addEL = HTMLElement.prototype.addEventListener;
-	let fakeAddEl = function addEventListener (type, listener, options) {
-		let upThis = this;
-		listener[UID] = listener[UID] || getRandom(uniqueLen);
-		this[UID] = this[UID] || getRandom(uniqueLen);
-		extChannel.postMessage({e: "evAdd", type: type, func: listener[UID], element: this[UID], selector: getCSSSelector(this)});
-		let result = addEL.apply(this, [type, function (event) {
-			let msgObj = {e: "evTrig", type: event.type, func: listener[UID], element: this[UID], selector: getCSSSelector(this), blocked: "full"};
-			msgObj.origin = event.target[UID];
-			if (blacklistEvent.indexOf(event.type) == -1) {
-				msgObj.blocked = "none";
-				extChannel.postMessage(msgObj);
-				return listener(event);
-			} else {
-				extChannel.postMessage(msgObj);
-			};
-		}, options]);
-		// Experimental hijack
-		return result;
+	RawApi.addEL = HTMLElement.prototype.addEventListener;
+	let addEventListener = function (type, listener, options = false) {
+		// This should return nothing
+		let upThis = this, impl = "func";
+		if (!this[UID]) {
+			// Adds a UID if it does not exist
+			this[UID] = getRandom(uniqueLen);
+		};
+		if (listener?.handleEvent) {
+			impl = "obj";
+			// Implements the handleEvent handler
+			listener.handleEvent[UID] = listener.handleEvent[UID] || getRandom(uniqueLen);
+		} else {
+			// Normal callback
+			listener[UID] = listener[UID] || getRandom(uniqueLen);
+		};
+		extChannel.postMessage({e: "evAdd", type: type, impl: impl, func: listener[UID] || listener.handleEvent[UID], actor: this[UID], selector: getCSSSelector(this), blocked: "none"});
+		// Currently just monitors addition for handleEvent
+		if (impl == "fun") {
+			RawApi.addEL.call(this, type, function (ev) {
+				let msg = {e: "evAct", type: type, func: listener[UID], actor: this[UID], from: ev.target[UID], selector: getCSSSelector(this), blocked: "full"};
+				if (blacklistEvent.indexOf(ev.type) == -1) {
+					msg.blocked = "none";
+					extChannel.postMessage(msg);
+					listener.call(this, ev);
+				} else {
+					extChannel.postMessage(msg);
+				};
+			}, options);
+		} else {
+			RawApi.addEL.call(this, type, listener, options);
+		};
 	};
-	fakeNative(HTMLElement.prototype.addEventListener);
-	HTMLElement.prototype.addEventListener = fakeAddEl;
-	document.addEventListener = fakeAddEl;*/
+	fakeNative(addEventListener);
+	HTMLElement.prototype.addEventListener = addEventListener;
+	document.addEventListener = addEventListener;
 	// No visibility change reading, not until you permit
 	let setHidden = false;
 	Object.defineProperty(document, "hidden", {get: function () {
@@ -248,15 +261,15 @@ self.fakeScreenVideo = undefined;
 		};
 	};
 	// History API
-	Minuet.history = self.history;
+	RawApi.history = self.history;
 	{
 		let replaceState = function (stateObj, unused, url = "") {
 			let msg = {e: "historySet", data: stateObj, target: url, blocked: "full"};
 			if (MinConf.h.r == 2) {
-				Minuet.history.replaceState(stateObj, unused, url);
+				RawApi.history.replaceState(stateObj, unused, url);
 				msg.blocked = "none";
 			} else if (MinConf.h.r == 1) {
-				Minuet.history.replaceState(stateObj, unused, "");
+				RawApi.history.replaceState(stateObj, unused, "");
 				msg.blocked = "partial";
 			};
 			extChannel.postMessage(msg);
@@ -264,10 +277,10 @@ self.fakeScreenVideo = undefined;
 		let pushState = function (stateObj, unused, url = "") {
 			let msg = {e: "historyAdd", data: stateObj, target: url, blocked: "full"};
 			if (MinConf.h.p == 2) {
-				Minuet.history.pushState(stateObj, unused, url);
+				RawApi.history.pushState(stateObj, unused, url);
 				msg.blocked = "none";
 			} else if (MinConf.h.p == 1) {
-				Minuet.history.pushState(stateObj, unused, "");
+				RawApi.history.pushState(stateObj, unused, "");
 				msg.blocked = "partial";
 			};
 			extChannel.postMessage(msg);
@@ -275,7 +288,7 @@ self.fakeScreenVideo = undefined;
 		let go = function (delta = 0) {
 			let msg = {e: "historyGo", data: delta, suppressed: true};
 			if (MinConf.h.g) {
-				Minuet.history.go(delta);
+				RawApi.history.go(delta);
 				msg.suppressed = false;
 			};
 			extChannel.postMessage(msg);
@@ -283,7 +296,7 @@ self.fakeScreenVideo = undefined;
 		let back = function (delta = 0) {
 			let msg = {e: "historyGo", data: -1, suppressed: true};
 			if (MinConf.h.b) {
-				Minuet.history.back();
+				RawApi.history.back();
 				msg.suppressed = false;
 			};
 			extChannel.postMessage(msg);
@@ -291,7 +304,7 @@ self.fakeScreenVideo = undefined;
 		let forward = function (delta = 0) {
 			let msg = {e: "historyGo", data: 1, suppressed: true};
 			if (MinConf.h.f) {
-				Minuet.history.forward();
+				RawApi.history.forward();
 				msg.suppressed = false;
 			};
 			extChannel.postMessage(msg);

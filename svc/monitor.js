@@ -119,10 +119,10 @@ listeners.pageClose = async function (data) {
 	let pid = data.id;
 	inPages[pid].port.disconnect();
 	let tid = inPages[pid].tab;
-	if (inTabs[tid].has(pid)) {
+	if (inTabs[tid]?.has(pid)) {
 		inTabs[tid].delete(pid);
 	};
-	if (inTabs[tid].size < 1) {
+	if (inTabs[tid]?.size < 1) {
 		delete inTabs[tid];
 		ics.debug(`Dead tab ${tid} removed.`);
 	};

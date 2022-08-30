@@ -21,7 +21,7 @@ self.fakeScreenVideo = undefined;
 	let Minuet = {}, RawApi = {};
 	// Config for Minuette
 	let MinConf = {};
-	MinConf.h = {g: 1, f: 1, b: 1, p: 0, r: 0}; // History API
+	MinConf.h = {g: 1, f: 1, b: 1, p: 1, r: 1}; // History API
 	// Original console API exposure
 	Minuet.console = console;
 	// Console hijack
@@ -164,29 +164,29 @@ self.fakeScreenVideo = undefined;
 		extChannel.postMessage({e: "pageErr", type: "promise", promise: event.promise[UID], log: event.reason?.stack || event.reason, from: event.promise[UID]});
 	});
 	// Event listener hijack
-	let addEL = HTMLElement.prototype.addEventListener;
+	/*let addEL = HTMLElement.prototype.addEventListener;
 	let fakeAddEl = function addEventListener (type, listener, options) {
 		let upThis = this;
 		listener[UID] = listener[UID] || getRandom(uniqueLen);
 		this[UID] = this[UID] || getRandom(uniqueLen);
 		extChannel.postMessage({e: "evAdd", type: type, func: listener[UID], element: this[UID], selector: getCSSSelector(this)});
 		let result = addEL.apply(this, [type, function (event) {
-			let msgObj = {e: "evTrig", type: event.type, func: listener[UID], element: this[UID], selector: getCSSSelector(this)};
+			let msgObj = {e: "evTrig", type: event.type, func: listener[UID], element: this[UID], selector: getCSSSelector(this), blocked: "full"};
 			msgObj.origin = event.target[UID];
 			if (blacklistEvent.indexOf(event.type) == -1) {
-				listener(event);
-				msgObj.suppressed = false;
+				msgObj.blocked = "none";
+				extChannel.postMessage(msgObj);
+				return listener(event);
 			} else {
-				msgObj.suppressed = true;
+				extChannel.postMessage(msgObj);
 			};
-			extChannel.postMessage(msgObj);
 		}, options]);
 		// Experimental hijack
 		return result;
 	};
 	fakeNative(HTMLElement.prototype.addEventListener);
 	HTMLElement.prototype.addEventListener = fakeAddEl;
-	document.addEventListener = fakeAddEl;
+	document.addEventListener = fakeAddEl;*/
 	// No visibility change reading, not until you permit
 	let setHidden = false;
 	Object.defineProperty(document, "hidden", {get: function () {
@@ -250,19 +250,25 @@ self.fakeScreenVideo = undefined;
 	// History API
 	Minuet.history = self.history;
 	{
-		let replaceState = function (stateObj, unused, url = "./") {
-			let msg = {e: "historySet", data: stateObj, target: url, suppressed: true};
-			if (MinConf.h.r) {
+		let replaceState = function (stateObj, unused, url = "") {
+			let msg = {e: "historySet", data: stateObj, target: url, blocked: "full"};
+			if (MinConf.h.r == 2) {
 				Minuet.history.replaceState(stateObj, unused, url);
-				msg.suppressed = false;
+				msg.blocked = "none";
+			} else if (MinConf.h.r == 1) {
+				Minuet.history.replaceState(stateObj, unused, "");
+				msg.blocked = "partial";
 			};
 			extChannel.postMessage(msg);
 		};
-		let pushState = function (stateObj, unused, url = "./") {
-			let msg = {e: "historyAdd", data: stateObj, target: url, suppressed: true};
-			if (MinConf.h.p) {
+		let pushState = function (stateObj, unused, url = "") {
+			let msg = {e: "historyAdd", data: stateObj, target: url, blocked: "full"};
+			if (MinConf.h.p == 2) {
 				Minuet.history.pushState(stateObj, unused, url);
-				msg.suppressed = false;
+				msg.blocked = "none";
+			} else if (MinConf.h.p == 1) {
+				Minuet.history.pushState(stateObj, unused, "");
+				msg.blocked = "partial";
 			};
 			extChannel.postMessage(msg);
 		};

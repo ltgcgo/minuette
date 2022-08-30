@@ -1,11 +1,15 @@
 "use strict";
 
 const propBlacklist = [];
+const recursiveLevel = 8;
 
-let canClone = function (value) {
+let canClone = function (value, step = 0) {
+	let newStep = step + 1;
 	// Adapted from StackOverflow question 32673518
 	if (Object(value) !== value) {
 		// Value is primitive
+		return true;
+	} else if (newStep > recursiveLevel) {
 		return true;
 	};
 	switch (value?.constructor) {
@@ -33,15 +37,15 @@ let canClone = function (value) {
 		};
 		case Array:
 		case Object: {
-			return Object.keys(value).every(prop => canClone(value[prop]));
+			return Object.keys(value).every(prop => canClone(value[prop], newStep));
 			break;
 		};
 		case Map: {
-			return [...value.keys()].every(canClone) && [...value.values()].every(canClone);
+			return [...value.keys()].every(canClone, newStep) && [...value.values()].every(canClone, newStep);
 			break;
 		};
 		case Set: {
-			return [...value.keys()].every(canClone);
+			return [...value.keys()].every(canClone, newStep);
 			break;
 		};
 		default: {
@@ -50,7 +54,7 @@ let canClone = function (value) {
 	};
 };
 let smartClone = function (value, step = 0) {
-	let newStep = 1;
+	let newStep = step + 1;
 	if (canClone(value)) {
 		return value;
 	} else {
@@ -80,7 +84,7 @@ let smartClone = function (value, step = 0) {
 				break;
 			};
 			case Array: {
-				if (step < 8) {
+				if (step < recursiveLevel) {
 					let newArr = [];
 					value?.forEach(function (e, i) {
 						let prompt = e;

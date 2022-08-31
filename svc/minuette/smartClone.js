@@ -12,6 +12,12 @@ let canClone = function (value, step = 0) {
 	} else if (newStep > recursiveLevel) {
 		return true;
 	};
+	try {
+		value?.constructor;
+	} catch (err) {
+		//console.error(err.stack);
+		return false;
+	};
 	switch (value?.constructor) {
 		//case Error:
 		//case AggregateError:
@@ -58,6 +64,12 @@ let smartClone = function (value, step = 0) {
 	if (canClone(value)) {
 		return value;
 	} else {
+		try {
+			value?.constructor;
+		} catch (err) {
+			//console.error(err.stack);
+			return smartClone(err);
+		};
 		switch (value?.constructor) {
 			case ArrayBuffer: {
 				return {

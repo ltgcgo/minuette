@@ -66,15 +66,18 @@ self.fakeScreenVideo = undefined;
 			} else if (executor.constructor == Promise) {
 				ics.error(`Recursive promise capsulation.`);
 			} else {
-				extChannel.postMessage({e: "asyncNew", id: this[UID]});
+				if (!executor[UID]) {
+					executor[UID] = getRandom(uniqueLen);
+				};
+				extChannel.postMessage({e: "asyncNew", id: this[UID], func: executor[UID]});
 				this.#realPromise = new RawApi.promise(function (resolve, reject) {
 					extChannel.postMessage({e: "asyncRun", id: upThis[UID]});
 					let resolver = function (value) {
-						extChannel.postMessage({e: "asyncDone", id: upThis[UID], data: smartClone(value), parent: upThis[PUID]});
+						extChannel.postMessage({e: "asyncDone", id: upThis[UID], data: smartClone(value), func: executor[UID], parent: upThis[PUID]});
 						resolve(value);
 					};
 					let rejector = function (reason) {
-						extChannel.postMessage({e: "asyncFail", id: upThis[UID], data: reason, parent: upThis[PUID]});
+						extChannel.postMessage({e: "asyncFail", id: upThis[UID], data: reason, func: executor[UID], parent: upThis[PUID]});
 						reject(reason);
 					};
 					if (executor) {
@@ -88,34 +91,46 @@ self.fakeScreenVideo = undefined;
 			throw(reason);
 		}) {
 			let upThis = this;
+			if (!success[UID]) {
+				success[UID] = getRandom(uniqueLen);
+			};
+			if (!failure[UID]) {
+				failure[UID] = getRandom(uniqueLen);
+			};
 			let result = new Promise(this.#realPromise.then(function (value) {
-				extChannel.postMessage({e: "asyncDone", id: result[UID], data: smartClone(value), parent: upThis[UID]});
+				extChannel.postMessage({e: "asyncDone", id: result[UID], data: smartClone(value), func: success[UID], parent: upThis[UID]});
 				return success(value);
 			}, function (reason) {
-				extChannel.postMessage({e: "asyncFail", id: result[UID], data: reason, parent: upThis[UID]});
+				extChannel.postMessage({e: "asyncFail", id: result[UID], data: reason, func: failure[UID], parent: upThis[UID]});
 				return failure(reason);
 			}));
-			extChannel.postMessage({e: "asyncThen", id: result[UID], parent: this[UID]});
+			extChannel.postMessage({e: "asyncThen", id: result[UID], done: success[UID], fail: failure[UID], parent: this[UID]});
 			result[PUID] = this[UID];
 			return result;
 		};
 		catch(failure) {
 			let upThis = this;
+			if (!failure[UID]) {
+				failure[UID] = getRandom(uniqueLen);
+			};
 			let result = new Promise(this.#realPromise.catch(function (reason) {
-				extChannel.postMessage({e: "asyncFail", id: result[UID], data: reason, parent: upThis[UID]});
+				extChannel.postMessage({e: "asyncFail", id: result[UID], data: reason, func: failure[UID], parent: upThis[UID]});
 				return failure(reason);
 			}));
-			extChannel.postMessage({e: "asyncCatch", id: result[UID], parent: this[UID]});
+			extChannel.postMessage({e: "asyncCatch", id: result[UID], func: failure[UID], parent: this[UID]});
 			result[PUID] = this[UID];
 			return result;
 		};
 		finally(final) {
 			let upThis = this;
+			if (!final[UID]) {
+				final[UID] = getRandom(uniqueLen);
+			};
 			let result = new Promise(this.#realPromise.finally(function () {
-				extChannel.postMessage({e: "asyncFinish", id: result[UID], parent: upThis[UID]});
+				extChannel.postMessage({e: "asyncFinish", id: result[UID], func: final[UID], parent: upThis[UID]});
 				return final();
 			}));
-			extChannel.postMessage({e: "asyncFinal", id: result[UID], parent: this[UID]});
+			extChannel.postMessage({e: "asyncFinal", id: result[UID], func: final[UID], parent: this[UID]});
 			result[PUID] = this[UID];
 			return result;
 		};
@@ -182,13 +197,14 @@ self.fakeScreenVideo = undefined;
 		};
 		extChannel.postMessage({e: "evAdd", type: type, impl: impl, func: listener[UID] || listener.handleEvent[UID], actor: this[UID], selector: getCSSSelector(this), blocked: "none"});
 		// Currently just monitors addition for handleEvent
-		if (impl == "fun") {
+		if (impl == "func") {
 			RawApi.addEL.call(this, type, function (ev) {
-				let msg = {e: "evAct", type: type, func: listener[UID], actor: this[UID], from: ev.target[UID], selector: getCSSSelector(this), blocked: "full"};
+				let msg = {e: "evAct", type: type, func: listener[UID], actor: ev.currentTarget[UID], from: ev.target[UID], selector: getCSSSelector(ev.currentTarget), blocked: "full"};
 				if (blacklistEvent.indexOf(ev.type) == -1) {
 					msg.blocked = "none";
 					extChannel.postMessage(msg);
-					listener.call(this, ev);
+					//listener.call(upThis, ev);
+					listener.call(ev.currentTarget, ev);
 				} else {
 					extChannel.postMessage(msg);
 				};

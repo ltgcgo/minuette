@@ -27,24 +27,12 @@ listeners.pageMsg = function (conn) {
 		switch (msg.e) {
 			case "console": {
 				switch (msg.level) {
-					case "debug": {
-						console.debug(`${msg.t}(${msg.c}):\n`, ...msg.log);
-						break;
-					};
-					case "error": {
-						console.error(`${msg.t}(${msg.c}):\n`, ...msg.log);
-						break;
-					};
-					case "info": {
-						console.info(`${msg.t}(${msg.c}):\n`, ...msg.log);
-						break;
-					};
-					case "log": {
-						console.log(`${msg.t}(${msg.c}):\n`, ...msg.log);
-						break;
-					};
+					case "debug":
+					case "error":
+					case "info":
+					case "log":
 					case "warn": {
-						console.warn(`${msg.t}(${msg.c}):\n`, ...msg.log);
+						console[msg.level](`${msg.t}(${msg.c})\n[${msg.from.join("\n ")}]:\n`, ...msg.log);
 						break;
 					};
 					default: {
@@ -117,8 +105,8 @@ listeners.tabOpen = async function (data) {
 // Tab unload
 listeners.pageClose = async function (data) {
 	let pid = data.id;
-	inPages[pid].port.disconnect();
-	let tid = inPages[pid].tab;
+	inPages[pid]?.port.disconnect();
+	let tid = inPages[pid]?.tab;
 	if (inTabs[tid]?.has(pid)) {
 		inTabs[tid].delete(pid);
 	};

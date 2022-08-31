@@ -6,6 +6,7 @@ import {getRandom} from "./minuette/getRandom.js";
 import {getEventFamily, getEventData} from "./minuette/eventData.js";
 import {fakeScreen, fakeCamera} from "./minuette/fakeStream.js";
 import {smartClone} from "./minuette/smartClone.js";
+import {errorFilter, stackFilter} from "./minuette/stackFilter.js";
 self.blacklistEvent = ["visibilitychange", "pagehide", "pageshow"];
 self.fakeScreenVideo = undefined;
 {
@@ -29,12 +30,18 @@ self.fakeScreenVideo = undefined;
 		self.console = {};
 		for (let name in RawApi.console) {
 			self.console[name] = function (...args) {
-				// This can be fingerprinted by blank function names. Beware.
 				RawApi.console[name](...args);
 				args.forEach(function (e, i, a) {
 					a[i] = smartClone(e);
 				});
-				extChannel.postMessage({e: "console", level: name, log: args});
+				let stacked = (new Error("")).stack.split("\n");
+				stacked.shift();
+				stacked = stacked.slice(0, 2);
+				stacked.forEach((e, i, a) => {
+					a[i] = stackFilter(e);
+				});
+				RawApi.console.debug.call(RawApi.console, `At: ${stacked.join("\n    ")}`);
+				extChannel.postMessage({e: "console", level: name, log: args, from: stacked});
 			};
 			Object.defineProperty(console[name], "name", {value: name});
 			fakeNative(self.console[name]);
@@ -173,10 +180,10 @@ self.fakeScreenVideo = undefined;
 	fakeNative(self.Promise);
 	// Page error capturing
 	self.addEventListener("error", function (event) {
-		extChannel.postMessage({e: "pageErr", type: event.type, promise: false, log: event.message, from: event.filename});
+		extChannel.postMessage({e: "pageErr", type: event.type, promise: false, log: errorFilter(event.message), from: event.filename});
 	});
 	self.addEventListener("unhandledrejection", function (event) {
-		extChannel.postMessage({e: "pageErr", type: "promise", promise: event.promise[UID], log: event.reason?.stack || event.reason, from: event.promise[UID]});
+		extChannel.postMessage({e: "pageErr", type: "promise", promise: event.promise[UID], log: errorFilter(event.reason) || event.reason, from: event.promise[UID]});
 	});
 	// Event listener hijack
 	RawApi.addEL = HTMLElement.prototype.addEventListener;

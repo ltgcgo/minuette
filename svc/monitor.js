@@ -74,7 +74,7 @@ listeners.pageMsg = function (conn) {
 			case "evDel": {
 				break;
 			};
-			/*case "asyncNew":
+			case "asyncNew":
 			case "asyncRun":
 			case "asyncThen":
 			case "asyncCatch":
@@ -86,7 +86,7 @@ listeners.pageMsg = function (conn) {
 			case "promRace":
 			case "promSettle": {
 				break;
-			};*/
+			};
 			default: {
 				console.debug(msg);
 			};

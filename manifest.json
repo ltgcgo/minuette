@@ -3,7 +3,7 @@
 	"default_locale": "en",
 	"name": "__MSG_extName__",
 	"short_name": "Minuette",
-	"version": "0.0.5",
+	"version": "0.0.7",
 	"description": "__MSG_extDesc__",
 	"homepage_url": "https://www.ltgc.cc/project/?view=/minuette",
 	"browser_action": {
@@ -19,7 +19,7 @@
 			"enabled": true
 		}
 	},
-	"minimum_chrome_version": "81.0.0",
+	"minimum_chrome_version": "91.0.0",
 	"options_page": "ui/placeholder.htm",
 	"options_ui": {
 		"browser_style": false,
@@ -38,7 +38,7 @@
 	"browser_specific_settings": {
 		"gecko": {
 			"id": "minuette@ltgc.cc",
-			"strict_min_version": "65.0"
+			"strict_min_version": "91.0"
 		}
 	},
 	"content_scripts": [],

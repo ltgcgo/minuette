@@ -1,5 +1,7 @@
 "use strict";
 
+import {getCSSSelector} from "./cssSelector.js";
+
 const propBlacklist = [];
 const recursiveLevel = 8;
 
@@ -68,7 +70,7 @@ let smartClone = function (value, step = 0) {
 			value?.constructor;
 		} catch (err) {
 			//console.error(err.stack);
-			return smartClone(err);
+			//return smartClone(err, newStep);
 		};
 		switch (value?.constructor) {
 			case ArrayBuffer: {
@@ -81,6 +83,13 @@ let smartClone = function (value, step = 0) {
 				return {
 					uncloned: "function",
 					name: value.name
+				};
+			};
+			// This can vary, and may become not available.
+			case Window: {
+				return {
+					uncloned: "globalThis",
+					name: "window"
 				};
 			};
 			case XMLHttpRequest: {
@@ -146,6 +155,15 @@ let smartClone = function (value, step = 0) {
 					for (let prop in value) {
 						let prompt = value[prop];
 						if (prompt === null || prompt === undefined) {
+						} else if (prompt.constructor == self[prompt.constructor.name]) {
+							// Can be used to filter by only names!
+							let protoName = prompt.constructor.name;
+							if (protoName.indexOf("HTML") == 0 && protoName.indexOf("Element") == protoName.length - 7) {
+								prompt = {
+									uncloned: "htmlElement",
+									selector: getCSSSelector(prompt)
+								};
+							};
 						};
 						newObj[prop] = smartClone(prompt, newStep);
 					};

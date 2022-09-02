@@ -36,7 +36,7 @@ self.fakeScreenVideo = undefined;
 				});
 				let stacked = (new Error("")).stack.split("\n");
 				stacked.shift();
-				stacked = stacked.slice(0, 2);
+				stacked = stacked.slice(0, 4);
 				stacked.forEach((e, i, a) => {
 					a[i] = stackFilter(e);
 				});
@@ -178,13 +178,6 @@ self.fakeScreenVideo = undefined;
 	};
 	Object.defineProperty(self.Promise, "name", {value: "Promise"});
 	fakeNative(self.Promise);
-	// Page error capturing
-	self.addEventListener("error", function (event) {
-		extChannel.postMessage({e: "pageErr", type: event.type, promise: false, log: errorFilter(event.message), from: event.filename});
-	});
-	self.addEventListener("unhandledrejection", function (event) {
-		extChannel.postMessage({e: "pageErr", type: "promise", promise: event.promise[UID], log: errorFilter(event.reason) || event.reason, from: event.promise[UID]});
-	});
 	// Event listener hijack
 	RawApi.addEL = HTMLElement.prototype.addEventListener;
 	let addEventListener = function (type, listener, options = false) {
@@ -225,9 +218,11 @@ self.fakeScreenVideo = undefined;
 	document.addEventListener = addEventListener;
 	// No visibility change reading, not until you permit
 	let setHidden = false;
-	Object.defineProperty(document, "hidden", {get: function () {
-		return setHidden;
-	}});
+	try {
+		Object.defineProperty(document, "hidden", {get: function () {
+			return setHidden;
+		}});
+	} catch (err) {};
 	// Hijack screen reading
 	let realScreen = self.screen, fakeScreenWidth, fakeScreenHeight;
 	self.screen = new Proxy(self.screen, {get: function (obj, prop) {
@@ -283,6 +278,13 @@ self.fakeScreenVideo = undefined;
 			};
 		};
 	};
+	// Page error capturing
+	self.addEventListener("error", function (event) {
+		extChannel.postMessage({e: "pageErr", type: event.type, promise: false, log: errorFilter(event.message), from: event.filename});
+	});
+	self.addEventListener("unhandledrejection", function (event) {
+		extChannel.postMessage({e: "pageErr", type: "promise", promise: event.promise[UID], log: errorFilter(event.reason) || event.reason, from: event.promise[UID]});
+	});
 	// History API
 	RawApi.history = self.history;
 	{
@@ -375,7 +377,7 @@ self.fakeScreenVideo = undefined;
 		try {
 			stream = await getDispMed.apply(navMedDev, arguments);
 		} catch (err) {
-			extChannel.postMessage({e: "getDisplay", success: false});
+			extChannel.postMessage({e: "getDisplay", done: false});
 			throw(err);
 		};
 		// Hijack stream
@@ -423,7 +425,7 @@ self.fakeScreenVideo = undefined;
 			};
 		}, 50);
 		let newStream = fakeVideoCanvas.captureStream(60);
-		extChannel.postMessage({e: "getDisplay", success: true, stream: stream.id, task: proxyScreen});
+		extChannel.postMessage({e: "getDisplay", done: true, stream: stream.id, task: proxyScreen});
 		return newStream;
 	};
 	ics.debug(`Minuette launched as ${extDataId}.`);

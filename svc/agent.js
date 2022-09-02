@@ -1,6 +1,7 @@
 "use strict";
 import {ics} from "./ics.js";
 const map = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
+let minuetteOn = false;
 
 if (!self.agentActive) {
 	// Injection start
@@ -21,18 +22,28 @@ if (!self.agentActive) {
 	// Generic extension private message receiver
 	let receiver = function (data) {
 		if (data.slice(0, 13) == "\"use strict\";") {
-			if (!self.minuetteOn) {
-				ics.debug(`Injection payload received when ${document.readyState}.`);
-				let loader = document.createElement("script");
-				let injectData = data.replace("-ReplaceMeWithSomethingUnique-", connectionId);
-				let blobUri = URL.createObjectURL(new Blob([injectData]));
-				loader.src = blobUri;
-				document.head.appendChild(loader);
-				self.minuetteOn = document.readyState;
-				loader.onload = function () {
-					ics.info(`Minuette loaded when ${minuetteOn} as ${connectionId}.`);
+			ics.debug(`Payload received when ${document.readyState}.`);
+			let repeatInject, injectFunc = function () {
+				if (!minuetteOn) {
+					if (document.head) {
+						let loader = document.createElement("script");
+						let injectData = data.replace("-ReplaceMeWithSomethingUnique-", connectionId);
+						let blobUri = URL.createObjectURL(new Blob([injectData]));
+						loader.src = blobUri;
+						document.head.appendChild(loader);
+						minuetteOn = true;
+						ics.debug(`Injected when ${document.readyState}.`);
+						clearInterval(repeatInject);
+					} else {
+						//ics.debug(`Waiting injection to start...`);
+					};
+				} else {
+					clearInterval(repeatInject);
+					ics.debug(`Forced unregistering.`);
 				};
 			};
+			repeatInject = setInterval(injectFunc, 5);
+			//injectFunc();
 		} else {
 			ics.debug("Received command: " + data);
 			let msg = JSON.parse(data);
@@ -82,6 +93,9 @@ if (!self.agentActive) {
 	chrome.runtime.onMessage.addListener(pubReceiver);
 	// Signal Minuette if the page closes
 	addEventListener("beforeunload", function () {
+		connection.postMessage(JSON.stringify({e: "pageEnd", p: pageId, u: location.href, t: tabId}));
+	});
+	addEventListener("close", function () {
 		connection.postMessage(JSON.stringify({e: "pageEnd", p: pageId, u: location.href, t: tabId}));
 	});
 	// Exchange heartbeats

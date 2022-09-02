@@ -18,6 +18,11 @@ let getCSSSelector = function (element, includeSmart) {
 			};
 		};
 	};
+	if (text == "null") {
+		if (element.constructor == HTMLDocument) {
+			text = "!document";
+		};
+	};
 	return text;
 };
 export {getCSSSelector};

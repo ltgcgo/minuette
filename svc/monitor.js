@@ -22,6 +22,7 @@ let notInternal = function (urlT) {
 // Page message processor
 listeners.pageMsg = function (conn) {
 	conn.postMessage(injector.payload);
+	conn.postMessage(getGeoMsg());
 	conn.onMessage.addListener(async function (data) {
 		let msg = JSON.parse(data);
 		switch (msg.e) {
@@ -74,7 +75,7 @@ listeners.pageMsg = function (conn) {
 				break;
 			};
 			default: {
-				ics.debug(msg);
+				console.debug(msg);
 			};
 		};
 	});
@@ -89,7 +90,7 @@ browser.webNavigation.onCommitted.addListener(async function (data) {
 		inTabs[data.tabId] = new Set();
 		listeners.tabOpen(await browser.tabs.get(data.tabId));
 	} else {
-		ics.debug(`Ignore opened internal tab ${data.tabId}(${data.url}).`);
+		ics.info(`Ignore opened internal tab ${data.tabId}(${data.url}).`);
 	};
 });
 listeners.tabOpen = async function (data) {
@@ -99,7 +100,7 @@ listeners.tabOpen = async function (data) {
 		runAt: "document_start",
 		matchAboutBlank: true
 	});
-	ics.debug(`Injection active on tab ${data.id}(${data.url}).`);
+	ics.info(`Injection active on tab ${data.id}(${data.url}).`);
 };
 
 // Tab unload
@@ -112,10 +113,10 @@ listeners.pageClose = async function (data) {
 	};
 	if (inTabs[tid]?.size < 1) {
 		delete inTabs[tid];
-		ics.debug(`Dead tab ${tid} removed.`);
+		ics.info(`Dead tab ${tid} removed.`);
 	};
 	delete inPages[pid];
-	ics.debug(`Dead page ${pid} removed.`);
+	ics.info(`Dead page ${pid} removed.`);
 };
 listeners.tabClose = async function (data) {
 	/* inTabs[data.id].forEach(function (e, i, a) {
@@ -161,7 +162,33 @@ let heartbeat = setInterval(async function () {
 	for (let tid in inTabs) {
 		if (inTabs[tid].size < 1) {
 			delete inTabs[tid];
-			ics.debug(`Removed dead tab ${tid}.`);
+			ics.info(`Removed dead tab ${tid}.`);
 		};
 	};
 }, 10000);
+
+// Fake geolocation support, default to the Greenwich Observatory.
+let fakeLat = 51.4769,
+fakeLong = 0;
+let getGeoMsg = function () {
+	return `{"e":"setLocation","lat":${fakeLat},"long":${fakeLong}}`;
+};
+let getNetLoc = async function () {
+	let geoApi = await (await fetch("https://api.ip.sb/geoip/")).json();
+	fakeLat = Math.round((geoApi.latitude + Math.random() * 0.2 - 0.1) * 10000) / 10000;
+	fakeLong = Math.round((geoApi.longitude + Math.random() * 0.2 - 0.1) * 10000) / 10000;
+	ics.info(`Fake geo in ${geoApi.country_code}(${geoApi.country}) to: ${fakeLat}, ${fakeLong}`);
+};
+let pushNetLoc = async function () {
+	let geoMsg = getGeoMsg();
+	for (let tid in inPages) {
+		inPages[tid].port.postMessage(geoMsg);
+	};
+};
+let thrgNetLoc = setInterval(function () {
+	if (Math.random() < 0.02) {
+		getNetLoc();
+	};
+}, 5000);
+getNetLoc();
+let thrpNetLoc = setInterval(pushNetLoc, Math.floor(Math.random() * 15000 + 15000));

@@ -96,7 +96,17 @@ let getEventFamily = function (type) {
 	};
 };
 let getEventData;
+let capturer = function (opt) {
+	if (opt == true) {
+		return "#";
+	} else if (!opt) {
+		return "~";
+	} else {
+		return opt.capture ? "#" : "~";
+	};
+};
 export {
 	getEventFamily,
-	getEventData
+	getEventData,
+	capturer
 };

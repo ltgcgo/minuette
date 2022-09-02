@@ -61,6 +61,21 @@ let canClone = function (value, step = 0) {
 		};
 	};
 };
+let selectiveBlock = function (value) {
+	let prompt = value;
+	if (prompt === null || prompt === undefined) {
+	} else if (prompt.constructor == self[prompt.constructor.name]) {
+		// Can be used to filter by only names!
+		let protoName = prompt.constructor.name;
+		if (protoName.indexOf("HTML") == 0 && protoName.indexOf("Element") == protoName.length - 7) {
+			prompt = {
+				uncloned: "htmlElement",
+				selector: getCSSSelector(prompt)
+			};
+		};
+	};
+	return prompt;
+};
 let smartClone = function (value, step = 0) {
 	let newStep = step + 1;
 	if (canClone(value)) {
@@ -136,9 +151,7 @@ let smartClone = function (value, step = 0) {
 				if (step < recursiveLevel) {
 					let newArr = [];
 					value?.forEach(function (e, i) {
-						let prompt = e;
-						if (prompt === null || prompt === undefined) {
-						};
+						let prompt = selectiveBlock(value[prop]);
 						newArr[i] = smartClone(prompt, newStep);
 					});
 					return newArr;
@@ -153,18 +166,7 @@ let smartClone = function (value, step = 0) {
 				if (step < 8) {
 					let newObj = {};
 					for (let prop in value) {
-						let prompt = value[prop];
-						if (prompt === null || prompt === undefined) {
-						} else if (prompt.constructor == self[prompt.constructor.name]) {
-							// Can be used to filter by only names!
-							let protoName = prompt.constructor.name;
-							if (protoName.indexOf("HTML") == 0 && protoName.indexOf("Element") == protoName.length - 7) {
-								prompt = {
-									uncloned: "htmlElement",
-									selector: getCSSSelector(prompt)
-								};
-							};
-						};
+						let prompt = selectiveBlock(value[prop]);
 						newObj[prop] = smartClone(prompt, newStep);
 					};
 					return newObj;

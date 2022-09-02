@@ -3,12 +3,14 @@ import {ics} from "./ics.js";
 import {fakeNative} from "./minuette/fakeNative.js";
 import {getCSSSelector} from "./minuette/cssSelector.js";
 import {getRandom} from "./minuette/getRandom.js";
-import {getEventFamily, getEventData} from "./minuette/eventData.js";
+import {capturer, getEventFamily, getEventData} from "./minuette/eventData.js";
 import {fakeScreen, fakeCamera} from "./minuette/fakeStream.js";
 import {smartClone} from "./minuette/smartClone.js";
 import {errorFilter, stackFilter} from "./minuette/stackFilter.js";
 self.blacklistEvent = ["visibilitychange", "pagehide", "pageshow"];
 self.fakeScreenVideo = undefined;
+self.FunStore = {};
+self.FunProxy = {}
 {
 	let extDataId = "-ReplaceMeWithSomethingUnique-";
 	// Constants
@@ -18,11 +20,16 @@ self.fakeScreenVideo = undefined;
 	UID = Symbol(), // Unique ID for tracked objects
 	PUID = Symbol(); // Reference of the parent
 	const uniqueLen = 16; // How unique should IDs be
+	// Geolocation API reserve
+	let fakeLat = 51.4768,
+	fakeLong = 0;
 	// Namespace for Minuette
 	let Minuet = {}, RawApi = {};
 	// Config for Minuette
 	let MinConf = {};
 	MinConf.h = {g: 1, f: 1, b: 1, p: 1, r: 1}; // History API
+	// Store pool for all event listeners
+	//let FunStore = {}, FunProxy = {};
 	// Original console API exposure
 	RawApi.console = console;
 	// Console hijack
@@ -180,6 +187,7 @@ self.fakeScreenVideo = undefined;
 	fakeNative(self.Promise);
 	// Event listener hijack
 	RawApi.addEL = HTMLElement.prototype.addEventListener;
+	RawApi.rmvEL = HTMLElement.prototype.removeEventListener;
 	let addEventListener = function (type, listener, options = false) {
 		// This should return nothing
 		let upThis = this, impl = "func";
@@ -191,14 +199,16 @@ self.fakeScreenVideo = undefined;
 			impl = "obj";
 			// Implements the handleEvent handler
 			listener.handleEvent[UID] = listener.handleEvent[UID] || getRandom(uniqueLen);
+			listener[UID] = listener[UID] || getRandom(uniqueLen);
 		} else {
 			// Normal callback
 			listener[UID] = listener[UID] || getRandom(uniqueLen);
 		};
 		extChannel.postMessage({e: "evAdd", type: type, impl: impl, func: listener[UID] || listener.handleEvent[UID], actor: this[UID], selector: getCSSSelector(this), blocked: "none"});
+		let efid = `${capturer(options)}${listener[UID]}:${type}`;
 		// Currently just monitors addition for handleEvent
 		if (impl == "func") {
-			RawApi.addEL.call(this, type, function (ev) {
+			let proxyAdd = function (ev) {
 				let msg = {e: "evAct", type: type, func: listener[UID], actor: ev.currentTarget[UID], from: ev.target[UID], selector: getCSSSelector(ev.currentTarget), blocked: "full"};
 				if (blacklistEvent.indexOf(ev.type) == -1) {
 					msg.blocked = "none";
@@ -208,14 +218,55 @@ self.fakeScreenVideo = undefined;
 				} else {
 					extChannel.postMessage(msg);
 				};
-			}, options);
+			};
+			FunStore[efid] = {
+				t: type,
+				f: listener
+			};
+			if (!FunProxy[efid]) {
+				FunProxy[efid] = {};
+			};
+			FunProxy[efid][this[UID]] = proxyAdd;
+			RawApi.addEL.call(this, type, proxyAdd, options);
 		} else {
+			let efid = `${capturer(options)}${listener.handleEvent[UID]}:${type}`;
+			FunStore[efid] = {
+				t: type,
+				f: listener
+			};
+			if (!FunProxy[efid]) {
+				FunProxy[efid] = {};
+			};
+			FunProxy[efid][this[UID]] = proxyAdd;
 			RawApi.addEL.call(this, type, listener, options);
 		};
 	};
+	let removeEventListener = function (type, listener, options = false) {
+		let efid = `${capturer(options)}${listener[UID]}:${type}`;
+		let funFetch = FunStore[efid];
+		if (!funFetch) {
+			return;
+		};
+		let funProxy = FunProxy[efid][this[UID]];
+		if (!funProxy) {
+			return;
+		};
+		// Remove from FunProxy
+		extChannel.postMessage({e: "evDel", type: type, func: listener[UID] || listener.handleEvent[UID], actor: this[UID], selector: getCSSSelector(this), blocked: "none"});
+		RawApi.rmvEL.call(this, type, funProxy, options);
+		delete FunProxy[efid][this[UID]];
+		// Only remove from FunStore if all references of it is removed.
+		if (Object.keys(FunProxy[efid]).length < 1) {
+			delete FunProxy[efid];
+			delete FunStore[efid];
+		};
+	};
 	fakeNative(addEventListener);
+	fakeNative(removeEventListener);
 	HTMLElement.prototype.addEventListener = addEventListener;
+	HTMLElement.prototype.removeEventListener = removeEventListener;
 	document.addEventListener = addEventListener;
+	document.removeEventListener = removeEventListener;
 	// No visibility change reading, not until you permit
 	let setHidden = false;
 	try {
@@ -273,6 +324,11 @@ self.fakeScreenVideo = undefined;
 				setHidden = msg.status || false;
 				break;
 			};
+			case "setLocation": {
+				fakeLat = msg.lat,
+				fakeLong = msg.long;
+				break;
+			};
 			default: {
 				ics.debug(msg);
 			};
@@ -285,6 +341,24 @@ self.fakeScreenVideo = undefined;
 	self.addEventListener("unhandledrejection", function (event) {
 		extChannel.postMessage({e: "pageErr", type: "promise", promise: event.promise[UID], log: errorFilter(event.reason) || event.reason, from: event.promise[UID]});
 	});
+	// Geolocation API
+	RawApi.geoloc = {
+		gcp: Geolocation.prototype.getCurrentPosition
+	};
+	Geolocation.prototype.getCurrentPosition = function (success, failure = function () {}, options = {}) {
+		// Provides fake results when denied
+		RawApi.geoloc.gcp.call(this, success, function () {
+			success({timestamp: Date.now(), coords: {
+				latitude: fakeLat,
+				longitude: fakeLong,
+				altitude: null,
+				accuracy: 100,
+				altitudeAccuracy: null,
+				heading: Math.floor(Math.random() * 360),
+				speed: null
+			}});
+		}, options);
+	};
 	// History API
 	RawApi.history = self.history;
 	{

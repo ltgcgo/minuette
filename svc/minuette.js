@@ -9,8 +9,7 @@ import {smartClone} from "./minuette/smartClone.js";
 import {errorFilter, stackFilter} from "./minuette/stackFilter.js";
 self.blacklistEvent = ["visibilitychange", "pagehide", "pageshow"];
 self.fakeScreenVideo = undefined;
-self.FunStore = {};
-self.FunProxy = {}
+//self.FunStore = {}, self.FunProxy = {};
 {
 	let extDataId = "-ReplaceMeWithSomethingUnique-";
 	// Constants
@@ -29,7 +28,7 @@ self.FunProxy = {}
 	let MinConf = {};
 	MinConf.h = {g: 1, f: 1, b: 1, p: 1, r: 1}; // History API
 	// Store pool for all event listeners
-	//let FunStore = {}, FunProxy = {};
+	let FunStore = {}, FunProxy = {};
 	// Original console API exposure
 	RawApi.console = console;
 	// Console hijack

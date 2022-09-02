@@ -74,7 +74,7 @@ listeners.pageMsg = function (conn) {
 			case "evDel": {
 				break;
 			};
-			case "asyncNew":
+			/*case "asyncNew":
 			case "asyncRun":
 			case "asyncThen":
 			case "asyncCatch":
@@ -86,7 +86,7 @@ listeners.pageMsg = function (conn) {
 			case "promRace":
 			case "promSettle": {
 				break;
-			};
+			};*/
 			default: {
 				console.debug(msg);
 			};
@@ -195,7 +195,9 @@ let getNetLoc = async function () {
 let pushNetLoc = async function () {
 	let geoMsg = getGeoMsg();
 	for (let tid in inPages) {
-		inPages[tid].port.postMessage(geoMsg);
+		try {
+			inPages[tid].port.postMessage(geoMsg);
+		} catch (err) {};
 	};
 };
 let thrgNetLoc = setInterval(function () {

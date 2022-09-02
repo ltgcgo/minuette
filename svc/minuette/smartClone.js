@@ -3,7 +3,7 @@
 import {getCSSSelector} from "./cssSelector.js";
 
 const propBlacklist = [];
-const recursiveLevel = 8;
+const recursiveLevel = 4;
 
 let canClone = function (value, step = 0) {
 	let newStep = step + 1;
@@ -87,6 +87,7 @@ let selectiveBlock = function (value) {
 	};
 	return prompt;
 };
+let ownPos;
 let smartClone = function (value, step = 0) {
 	let newStep = step + 1;
 	if (canClone(value)) {
@@ -98,6 +99,24 @@ let smartClone = function (value, step = 0) {
 			//console.error(err.stack);
 			//return smartClone(err, newStep);
 		};
+		let ownStk = (new Error()).stack.split("\n");
+		if (!ownPos) {
+			ownPos = ownStk[0].slice(0, ownStk[0].lastIndexOf(":"));
+			ownPos = ownPos.slice(0, ownPos.lastIndexOf(":"));
+		};
+		let layerCount = 0;
+		ownStk.forEach(function (e) {
+			if (e.indexOf(ownPos) == 0) {
+				layerCount ++;
+			};
+			if (layerCount > 6) {
+				throw(new InternalError("maximum call stack reached"));
+				return {
+					uncloned: value?.constructor.name
+				};
+			};
+		});
+		//console.info(`Code block ${step}, ${layerCount} at: ${ownPos}`);
 		switch (value?.constructor) {
 			case ArrayBuffer: {
 				return {
@@ -187,8 +206,9 @@ let smartClone = function (value, step = 0) {
 				break;
 			};
 			case Array: {
-				if (step < 8) {
+				if (step < recursiveLevel) {
 					let newArr = [];
+					debugger;
 					value?.forEach(function (e, i) {
 						let prompt = selectiveBlock(e);
 						newArr[i] = smartClone(prompt, newStep);
@@ -202,8 +222,9 @@ let smartClone = function (value, step = 0) {
 				break;
 			};
 			default: {
-				if (step < 8) {
+				if (step < recursiveLevel) {
 					let newObj = {};
+					debugger;
 					for (let prop in value) {
 						let prompt = selectiveBlock(value[prop]);
 						newObj[prop] = smartClone(prompt, newStep);

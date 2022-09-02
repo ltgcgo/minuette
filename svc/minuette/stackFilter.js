@@ -7,25 +7,27 @@ const blacklist = [
 ];
 
 let stackFilter = function (loc) {
-	let sepAt = loc.indexOf("@");
-	let funs = loc.slice(0, sepAt).split("/");
-	let result = funs[0];
-	if (funs.length > 1) {
-		let c = 0;
-		while (c < funs.length) {
-			let d = c + 1;
-			if ("0123456789<".indexOf(result[0]) > -1) {
-				result = funs[d];
-			} else if (blacklist.indexOf(result) > -1) {
-				result = funs[d];
+	if (loc.length > 0) {
+		let sepAt = loc.indexOf("@");
+		let funs = loc.slice(0, sepAt).split("/");
+		let result = funs[0];
+		if (funs.length > 1) {
+			let c = 0;
+			while (c < funs.length) {
+				let d = c + 1;
+				if ("0123456789<".indexOf(result[0]) > -1) {
+					result = funs[d];
+				} else if (blacklist.indexOf(result) > -1) {
+					result = funs[d];
+				};
+				c ++;
 			};
-			c ++;
+		} else if (result.length == 0) {
+			result = "<unnamed>";
 		};
-	} else if (result.length == 0) {
-		result = "<unnamed>";
+		result += `@${loc.slice(sepAt + 1)}`;
+		return result;
 	};
-	result += `@${loc.slice(sepAt + 1)}`;
-	return result;
 };
 let errorFilter = function (err) {
 	if (err.name && err.message?.length >= 0 && err.stack?.length >= 0) {
@@ -35,7 +37,7 @@ let errorFilter = function (err) {
 		};
 		err.stack.split("\n").forEach(function (e) {
 			if (e) {
-				msg += `\n  ${smartFilter(e)}`;
+				msg += `\n  ${stackFilter(e)}`;
 			};
 		});
 	} else {

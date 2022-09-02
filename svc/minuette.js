@@ -237,7 +237,7 @@ self.FunProxy = {}
 			if (!FunProxy[efid]) {
 				FunProxy[efid] = {};
 			};
-			FunProxy[efid][this[UID]] = proxyAdd;
+			FunProxy[efid][this[UID]] = listener;
 			RawApi.addEL.call(this, type, listener, options);
 		};
 	};

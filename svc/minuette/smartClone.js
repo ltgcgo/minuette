@@ -72,6 +72,17 @@ let selectiveBlock = function (value) {
 				uncloned: "htmlElement",
 				selector: getCSSSelector(prompt)
 			};
+		} else if (
+			prompt.tagName?.length > 0 &&
+			prompt.childNodes?.constructor == NodeList &&
+			prompt.classList?.constructor == DOMTokenList &&
+			prompt.id?.constructor == String &&
+			prompt.innerHTML?.constructor == String
+		) {
+			prompt = {
+				uncloned: "customElement",
+				selector: getCSSSelector(prompt)
+			};
 		};
 	};
 	return prompt;
@@ -90,8 +101,15 @@ let smartClone = function (value, step = 0) {
 		switch (value?.constructor) {
 			case ArrayBuffer: {
 				return {
-					uncloned: "ArrayBuffer",
+					uncloned: "arrayBuffer",
 					length: value.byteLength
+				};
+			};
+			case Location:
+			case URL: {
+				return {
+					uncloned: "url",
+					href: value.href
 				};
 			};
 			case Function: {
@@ -100,11 +118,32 @@ let smartClone = function (value, step = 0) {
 					name: value.name
 				};
 			};
+			case Headers: {
+				return Object.fromEntries(Array.from(value));
+			};
+			case ReadableStream: {
+				return {
+					uncloned: "stream",
+					type: "r"
+				};
+			};
+			case WritableStream: {
+				return {
+					uncloned: "stream",
+					type: "w"
+				};
+			};
 			// This can vary, and may become not available.
 			case Window: {
 				return {
 					uncloned: "globalThis",
 					name: "window"
+				};
+			};
+			case HTMLDocument: {
+				return {
+					uncloned: "globalThis",
+					name: "document"
 				};
 			};
 			case XMLHttpRequest: {
@@ -148,10 +187,10 @@ let smartClone = function (value, step = 0) {
 				break;
 			};
 			case Array: {
-				if (step < recursiveLevel) {
+				if (step < 8) {
 					let newArr = [];
 					value?.forEach(function (e, i) {
-						let prompt = selectiveBlock(value[prop]);
+						let prompt = selectiveBlock(e);
 						newArr[i] = smartClone(prompt, newStep);
 					});
 					return newArr;

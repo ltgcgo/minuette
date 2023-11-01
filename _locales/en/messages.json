@@ -4,7 +4,7 @@
 		"description": "The full name of this extension."
 	},
 	"extDesc": {
-		"message": "⏳ Probe and modify events, with the unicorn dentist's power.",
-		"description": "The description of this extension. Use Ponish please."
+		"message": "⏳ Intercept, inspect, orchestrate. Advanced debugging, or behaviour analysis.",
+		"description": "The description of this extension."
 	}
 }
